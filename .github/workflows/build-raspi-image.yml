@@ -128,7 +128,13 @@ jobs:
           find pi-gen/stage-opencloudtouch -type f | sort
 
       - name: Set up QEMU for cross-architecture builds
-        uses: docker/setup-qemu-action@v3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          sudo update-binfmts --enable
+          # Verify QEMU is available
+          ls /usr/bin/qemu-* || echo "QEMU binaries:"
+          update-binfmts --display | grep -i "aarch64\|arm" || true
 
       - name: Build image with pi-gen
         run: |
