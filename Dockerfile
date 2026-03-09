@@ -49,9 +49,10 @@ RUN npm run build --workspace=apps/frontend
 # Stage 2: Python Dependencies (separate for better caching)
 FROM python:3.11-slim@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2eafbf AS python-deps
 
-# Install build dependencies (libc6-dev + libffi-dev needed for arm/v7 C extensions)
+# Install build dependencies (full toolchain needed for arm/v7 cross-compilation)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libc6-dev libffi-dev && \
+    apt-get install -y --no-install-recommends \
+        gcc libc6-dev libffi-dev make autoconf automake libtool && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -75,7 +76,7 @@ RUN find /install -path "*setuptools/_vendor/jaraco*" -delete 2>/dev/null || tru
     find /install -name "wheel-0.45*.dist-info" -exec rm -rf {} + 2>/dev/null || true
 
 # Cleanup: Remove build deps and artifacts (reduce layer size)
-RUN apt-get purge -y --auto-remove gcc libc6-dev libffi-dev && \
+RUN apt-get purge -y --auto-remove gcc libc6-dev libffi-dev make autoconf automake libtool && \
     find /install -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
     find /install -name "*.pyc" -delete
 
