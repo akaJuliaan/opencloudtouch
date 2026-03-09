@@ -146,6 +146,14 @@ jobs:
           echo "=== Patched stage2 packages ==="
           cat "$PACKAGES_FILE"
 
+          # Patch 01-run.sh: rpi-resize service comes from rpi-swap (removed above)
+          # Make systemctl enable rpi-resize non-fatal
+          RUN_SCRIPT="pi-gen/stage2/01-sys-tweaks/01-run.sh"
+          sed -i 's/systemctl enable rpi-resize/systemctl enable rpi-resize 2>\/dev\/null || true/' "$RUN_SCRIPT"
+
+          echo "=== Patched 01-run.sh (rpi-resize line) ==="
+          grep -n "rpi-resize" "$RUN_SCRIPT" || echo "(no rpi-resize reference remaining)"
+
       - name: Fix Debian GPG keyring for bookworm
         run: |
           # Debian rotated signing keys - the bookworm keyring from debootstrap
