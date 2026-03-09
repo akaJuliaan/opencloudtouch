@@ -127,6 +127,9 @@ jobs:
           echo "=== Stage structure ==="
           find pi-gen/stage-opencloudtouch -type f | sort
 
+      - name: Set up QEMU for cross-architecture builds
+        uses: docker/setup-qemu-action@v3
+
       - name: Build image with pi-gen
         run: |
           cd pi-gen
