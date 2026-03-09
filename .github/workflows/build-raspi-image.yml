@@ -127,6 +127,25 @@ jobs:
           echo "=== Stage structure ==="
           find pi-gen/stage-opencloudtouch -type f | sort
 
+      - name: Patch pi-gen package lists for compatibility
+        run: |
+          # Some packages in pi-gen's stage2 may not be available in the
+          # bookworm RPi repo yet. Remove them to prevent apt-get failures.
+          # Our custom stage-opencloudtouch provides everything we need.
+          PACKAGES_FILE="pi-gen/stage2/01-sys-tweaks/00-packages"
+          echo "=== Original stage2 packages ==="
+          cat "$PACKAGES_FILE"
+
+          # Remove packages not yet in bookworm RPi repo
+          sed -i '/^rpi-swap/d' "$PACKAGES_FILE"
+          sed -i '/^rpi-usb-gadget/d' "$PACKAGES_FILE"
+          sed -i '/^rpi-keyboard-config$/d' "$PACKAGES_FILE"
+          sed -i '/^rpi-keyboard-fw-update$/d' "$PACKAGES_FILE"
+          sed -i '/^rpi-connect-lite$/d' "$PACKAGES_FILE"
+
+          echo "=== Patched stage2 packages ==="
+          cat "$PACKAGES_FILE"
+
       - name: Fix Debian GPG keyring for bookworm
         run: |
           # Debian rotated signing keys - the bookworm keyring from debootstrap
