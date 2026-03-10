@@ -165,6 +165,10 @@ jobs:
           # --- Skip cloud-init substage entirely (not needed for OCT) ---
           touch pi-gen/stage2/04-cloud-init/SKIP
 
+          # --- export-image/01-user-rename: userconf-pi is RPi-specific ---
+          # Skip the entire user-rename substage (userconf-pi not in bookworm)
+          touch pi-gen/export-image/01-user-rename/SKIP
+
           # --- Patch 01-run.sh: make systemctl calls non-fatal ---
           RUN_SCRIPT="pi-gen/stage2/01-sys-tweaks/01-run.sh"
           sed -i 's/systemctl enable rpi-resize/systemctl enable rpi-resize 2>\/dev\/null || true/' "$RUN_SCRIPT"
