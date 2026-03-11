@@ -44,3 +44,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+
+TRADEMARK NOTICE
+
+OpenCloudTouch (OCT) is an independent, open-source project and is NOT
+affiliated with, endorsed by, or sponsored by Bose Corporation.
+
+The following names and trademarks are the property of Bose Corporation:
+  - Bose® (registered trademark)
+  - SoundTouch® (registered trademark)
+  - SoundTouch 10, SoundTouch 20, SoundTouch 30, SoundTouch 300 (product names)
+  - Acoustimass® (registered trademark)
+
+All references to these trademarks in this project are used solely for the
+purpose of identifying compatible hardware devices and describing functionality.
+Such use does not imply any affiliation, endorsement, or sponsorship by
+Bose Corporation.
+
+This software interfaces with Bose SoundTouch® devices using their publicly
+documented local HTTP/WebSocket APIs only. It does NOT modify or
+reverse-engineer Bose hardware, violate any Bose patents or copyrights,
+use any proprietary Bose software or firmware, or claim any rights to
+Bose trademarks.
+
+For trademark inquiries: Please open an issue on GitHub.

@@ -4,7 +4,7 @@ services:
   opencloudtouch:
     build:
       context: ..
-      dockerfile: Dockerfile
+      dockerfile: deployment/Dockerfile
     container_name: opencloudtouch
     network_mode: host
     volumes:

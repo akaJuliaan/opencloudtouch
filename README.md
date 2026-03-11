@@ -8,7 +8,7 @@ Ziel: SoundTouch®-Lautsprecher (z. B. SoundTouch® 10/30/300) weiter nutzen, oh
 
 > Leitidee: Ein Container, eine Web-App, lokale Steuerung.
 
-**Trademark Notice**: OpenCloudTouch (OCT) is not affiliated with Bose® Corporation. Bose® and SoundTouch® are registered trademarks of Bose® Corporation. See `TRADEMARK.md`.
+**Trademark Notice**: OpenCloudTouch (OCT) is not affiliated with Bose® Corporation. Bose® and SoundTouch® are registered trademarks of Bose® Corporation. See `NOTICE`.
 
 ## Features
 
@@ -112,11 +112,12 @@ Pre-built SD card images for Raspberry Pi 3/4/5 are available on the [Releases p
 
 ```text
 opencloudtouch/
+|- .github/                         # CI/CD, codecov, CONTRIBUTING, SECURITY
 |- apps/
 |  |- backend/
 |  |  |- src/opencloudtouch/        # FastAPI Backend
 |  |  |- tests/                     # Unit/Integration/E2E/Real Tests
-|  |  |- pyproject.toml
+|  |  |- pyproject.toml             # inkl. pytest + coverage + ruff Config
 |  |  |- requirements.txt
 |  |  `- requirements-dev.txt
 |  `- frontend/
@@ -124,15 +125,18 @@ opencloudtouch/
 |     |- tests/
 |     `- package.json
 |- deployment/
+|  |- Dockerfile
 |  |- docker-compose.yml
-|  `- local/                        # PowerShell Deploy/Utility Scripts
-|- docs/
+|  |- config.example.yaml           # Backend-Konfigurationsvorlage
+|  |- .env.template                 # Env-Variablen-Vorlage
+|  |- raspi-image/                  # RPi SD-Card Image Build
+|  `- local/                       # PowerShell Deploy/Utility Scripts
 |- scripts/
 |  |- e2e-runner.mjs
+|  |- hooks/                        # Pre-commit hook scripts
 |  |- install-hooks.ps1
 |  `- install-hooks.sh
-|- Dockerfile
-|- package.json
+|- package.json                     # Workspaces, commitlint, prettier
 `- README.md
 ```
 
@@ -233,8 +237,8 @@ OCT_PORT=8080 docker compose -f deployment/docker-compose.yml up -d
 
 Aktuell erfolgt die Konfiguration primär ueber `OCT_`-Umgebungsvariablen.
 
-- Beispielwerte: `.env.template`
-- Vollstaendige Referenz: `config.example.yaml` und `docs/CONFIGURATION.md`
+- Beispielwerte: `deployment/.env.template`
+- Vollstaendige Referenz: `deployment/config.example.yaml` und `docs/CONFIGURATION.md`
 
 Wichtige Variablen:
 
@@ -269,7 +273,7 @@ Offen bzw. in Planung:
 
 ## Mitmachen
 
-Beitraege sind willkommen. Siehe `CONTRIBUTING.md`.
+Beitraege sind willkommen. Siehe `.github/CONTRIBUTING.md`.
 
 ## Lizenz
 

@@ -38,7 +38,7 @@ CONTAINER_PORT=7777
 - `docker-compose.override.yml` - Local Docker tweaks
 
 ❌ **DON'T put here:**
-- Shared configs (use root `config.example.yaml`)
+- Shared configs (use `deployment/config.example.yaml`)
 - Generic scripts useful for all devs (use `scripts/` or npm scripts)
 
 ---

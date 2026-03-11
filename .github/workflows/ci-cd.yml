@@ -352,6 +352,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: deployment/Dockerfile
           platforms: linux/amd64
           push: false
           load: true
@@ -437,6 +438,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: deployment/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
           labels: ${{ steps.meta.outputs.labels }}

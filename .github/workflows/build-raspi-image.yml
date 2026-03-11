@@ -97,14 +97,14 @@ jobs:
       - name: Install OpenCloudTouch stage
         run: |
           # Copy custom stage into pi-gen
-          cp -r raspi-image/stage-opencloudtouch pi-gen/stage-opencloudtouch
+          cp -r deployment/raspi-image/stage-opencloudtouch pi-gen/stage-opencloudtouch
 
           # Ensure all scripts are executable (Git on Windows strips +x)
           find pi-gen/stage-opencloudtouch -name "*.sh" -exec chmod +x {} \;
 
           # Copy embedded files
           mkdir -p pi-gen/stage-opencloudtouch/01-configure-oct/files
-          cp raspi-image/files/* pi-gen/stage-opencloudtouch/01-configure-oct/files/
+          cp deployment/raspi-image/files/* pi-gen/stage-opencloudtouch/01-configure-oct/files/
 
           # Set OCT version in compose file
           OCT_VERSION="${{ inputs.oct_version || 'latest' }}"

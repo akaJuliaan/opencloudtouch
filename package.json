@@ -63,5 +63,31 @@
     "streaming"
   ],
   "author": "Your Name",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"],
+    "rules": {
+      "type-enum": [2, "always", ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]],
+      "type-case": [2, "always", "lower-case"],
+      "type-empty": [2, "never"],
+      "scope-case": [2, "always", "lower-case"],
+      "subject-empty": [2, "never"],
+      "subject-full-stop": [2, "never", "."],
+      "subject-case": [2, "never", ["sentence-case", "start-case", "pascal-case", "upper-case"]],
+      "header-max-length": [2, "always", 100],
+      "body-leading-blank": [1, "always"],
+      "body-max-line-length": [2, "always", 100],
+      "footer-leading-blank": [1, "always"]
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "printWidth": 100,
+    "tabWidth": 2,
+    "useTabs": false,
+    "arrowParens": "always",
+    "endOfLine": "lf"
+  }
 }

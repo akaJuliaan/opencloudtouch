@@ -45,12 +45,26 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 asyncio_mode = "auto"
-addopts = "--strict-markers --tb=short --timeout=30"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-x -m \"not real_devices\" --strict-markers --tb=short --timeout=60"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "error::ResourceWarning",
+    "ignore:coroutine .* was never awaited:RuntimeWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests (require running server/devices)",
+    "real_devices: marks tests that require real hardware (excluded by default)",
+    "mock_only: marks tests that only work with mock adapters",
+]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -62,10 +76,23 @@ bump_message = "chore(release): bump version to $new_version"
 [tool.coverage.run]
 data_file = "../../.out/coverage/backend/.coverage"
 branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
 
 [tool.coverage.report]
 show_missing = true
 fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
 
 [tool.coverage.html]
 directory = "../../.out/coverage/backend/htmlcov"
@@ -75,3 +102,6 @@ output = "../../.out/coverage/backend/coverage.xml"
 
 [tool.coverage.json]
 output = "../../.out/coverage/backend/coverage.json"
+
+[tool.ruff]
+cache-dir = "../../.out/.ruff_cache"

@@ -15,5 +15,13 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          args: >
+            -Dsonar.projectKey=scheilch_opencloudtouch
+            -Dsonar.organization=scheilscm
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.projectName=opencloudtouch
+            -Dsonar.sources=apps/backend/src,apps/frontend/src
+            -Dsonar.exclusions=**/tests/**,**/__tests__/**,**/*.test.*,**/pytest.ini,**/sonar-project.properties
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
