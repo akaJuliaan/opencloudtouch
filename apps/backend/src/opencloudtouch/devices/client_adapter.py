@@ -12,7 +12,12 @@ from bosesoundtouchapi import SoundTouchClient as BoseClient
 from bosesoundtouchapi import SoundTouchDevice
 
 from opencloudtouch.core.exceptions import DeviceConnectionError
-from opencloudtouch.devices.client import DeviceClient, DeviceInfo, NowPlayingInfo
+from opencloudtouch.devices.client import (
+    DeviceClient,
+    DeviceInfo,
+    NowPlayingInfo,
+    VolumeInfo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -307,6 +312,40 @@ class BoseDeviceClientAdapter(DeviceClient):
                 f"Failed to store preset {preset_number} on {self.base_url}: {e}",
                 exc_info=True,
             )
+            raise DeviceConnectionError(self.ip, str(e)) from e
+
+    async def get_volume(self) -> VolumeInfo:
+        """Get current volume state from device."""
+        try:
+            vol = self._client.GetVolume()
+            return VolumeInfo(
+                actual=vol.Actual,
+                target=vol.Target,
+                muted=vol.IsMuted,
+            )
+        except Exception as e:
+            logger.error(
+                f"Failed to get volume from {self.base_url}: {e}", exc_info=True
+            )
+            raise DeviceConnectionError(self.ip, str(e)) from e
+
+    async def set_volume(self, level: int) -> None:
+        """Set volume level (0-100)."""
+        try:
+            self._client.SetVolumeLevel(level)
+        except Exception as e:
+            logger.error(f"Failed to set volume on {self.base_url}: {e}", exc_info=True)
+            raise DeviceConnectionError(self.ip, str(e)) from e
+
+    async def set_mute(self, muted: bool) -> None:
+        """Set mute state."""
+        try:
+            if muted:
+                self._client.MuteOn(refresh=False)
+            else:
+                self._client.MuteOff(refresh=False)
+        except Exception as e:
+            logger.error(f"Failed to set mute on {self.base_url}: {e}", exc_info=True)
             raise DeviceConnectionError(self.ip, str(e)) from e
 
     async def close(self) -> None:

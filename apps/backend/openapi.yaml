@@ -200,6 +200,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/devices/{device_id}/now-playing:
+    get:
+      tags:
+      - Devices
+      summary: Get Now Playing
+      description: Get current playback status for a device.
+      operationId: get_now_playing_api_devices__device_id__now_playing_get
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Device Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/devices/{device_id}/volume:
+    get:
+      tags:
+      - Devices
+      summary: Get Volume
+      description: Get current volume state for a device.
+      operationId: get_volume_api_devices__device_id__volume_get
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Device Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Devices
+      summary: Set Volume
+      description: Set volume level (0-100).
+      operationId: set_volume_api_devices__device_id__volume_put
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Device Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Body_set_volume_api_devices__device_id__volume_put'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/devices/{device_id}/mute:
+    put:
+      tags:
+      - Devices
+      summary: Set Mute
+      description: Set mute state.
+      operationId: set_mute_api_devices__device_id__mute_put
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Device Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Body_set_mute_api_devices__device_id__mute_put'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/presets/set:
     post:
       tags:
@@ -2048,6 +2163,26 @@ components:
       - message
       title: BackupResponse
       description: Response with backup results.
+    Body_set_mute_api_devices__device_id__mute_put:
+      properties:
+        muted:
+          type: boolean
+          title: Muted
+      type: object
+      required:
+      - muted
+      title: Body_set_mute_api_devices__device_id__mute_put
+    Body_set_volume_api_devices__device_id__volume_put:
+      properties:
+        level:
+          type: integer
+          maximum: 100.0
+          minimum: 0.0
+          title: Level
+      type: object
+      required:
+      - level
+      title: Body_set_volume_api_devices__device_id__volume_put
     ConfigModifyRequest:
       properties:
         device_ip:

@@ -36,6 +36,15 @@ class NowPlayingInfo:
     artwork_url: Optional[str] = None
 
 
+@dataclass
+class VolumeInfo:
+    """Device volume state."""
+
+    actual: int  # Current volume level (0-100)
+    target: int  # Target volume level (0-100)
+    muted: bool  # Whether device is muted
+
+
 class DeviceClient(ABC):
     """Abstract client for device HTTP API."""
 
@@ -80,6 +89,21 @@ class DeviceClient(ABC):
             ConnectionError: If device is unreachable
             ValueError: If key or state is invalid
         """
+        pass
+
+    @abstractmethod
+    async def get_volume(self) -> "VolumeInfo":
+        """Get current volume state."""
+        pass
+
+    @abstractmethod
+    async def set_volume(self, level: int) -> None:
+        """Set volume level (0-100)."""
+        pass
+
+    @abstractmethod
+    async def set_mute(self, muted: bool) -> None:
+        """Set mute state."""
         pass
 
     @abstractmethod

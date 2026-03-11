@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from opencloudtouch.devices.client import NowPlayingInfo
+from opencloudtouch.devices.client import NowPlayingInfo, VolumeInfo
 from opencloudtouch.devices.models import KeyType, SyncResult
 from opencloudtouch.devices.repository import Device
 from opencloudtouch.devices.service import DeviceService
@@ -478,3 +478,143 @@ class TestDeviceServiceDeletion:
 
         # Assert repository was never called
         mock_repository.delete_all.assert_not_called()
+
+
+class TestDeviceServiceVolume:
+    """Tests for volume control methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_volume_success(
+        self, device_service, mock_repository, sample_device
+    ):
+        """Test get_volume returns VolumeInfo from the device client."""
+        mock_repository.get_by_device_id.return_value = sample_device
+        volume_info = VolumeInfo(actual=42, target=42, muted=False)
+
+        mock_client = AsyncMock()
+        mock_client.get_volume = AsyncMock(return_value=volume_info)
+        mock_client.close = AsyncMock()
+
+        with patch(
+            "opencloudtouch.devices.service.get_device_client",
+            return_value=mock_client,
+        ):
+            result = await device_service.get_volume("AABBCC112233")
+
+        assert result.actual == 42
+        assert result.muted is False
+        mock_client.get_volume.assert_awaited_once()
+        mock_client.close.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_volume_device_not_found(self, device_service, mock_repository):
+        """Test get_volume raises ValueError for unknown device."""
+        mock_repository.get_by_device_id.return_value = None
+
+        with pytest.raises(ValueError, match="not found"):
+            await device_service.get_volume("NONEXISTENT")
+
+    @pytest.mark.asyncio
+    async def test_set_volume_success(
+        self, device_service, mock_repository, sample_device
+    ):
+        """Test set_volume calls client and returns updated state."""
+        mock_repository.get_by_device_id.return_value = sample_device
+        updated = VolumeInfo(actual=70, target=70, muted=False)
+
+        mock_client = AsyncMock()
+        mock_client.set_volume = AsyncMock()
+        mock_client.get_volume = AsyncMock(return_value=updated)
+        mock_client.close = AsyncMock()
+
+        with patch(
+            "opencloudtouch.devices.service.get_device_client",
+            return_value=mock_client,
+        ):
+            result = await device_service.set_volume("AABBCC112233", 70)
+
+        assert result.actual == 70
+        mock_client.set_volume.assert_awaited_once_with(70)
+        mock_client.get_volume.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_set_volume_out_of_range(self, device_service):
+        """Test set_volume raises ValueError for invalid level."""
+        with pytest.raises(ValueError, match="Volume must be 0-100"):
+            await device_service.set_volume("AABBCC112233", 150)
+
+        with pytest.raises(ValueError, match="Volume must be 0-100"):
+            await device_service.set_volume("AABBCC112233", -1)
+
+    @pytest.mark.asyncio
+    async def test_set_mute_success(
+        self, device_service, mock_repository, sample_device
+    ):
+        """Test set_mute calls client and returns updated state."""
+        mock_repository.get_by_device_id.return_value = sample_device
+        updated = VolumeInfo(actual=42, target=42, muted=True)
+
+        mock_client = AsyncMock()
+        mock_client.set_mute = AsyncMock()
+        mock_client.get_volume = AsyncMock(return_value=updated)
+        mock_client.close = AsyncMock()
+
+        with patch(
+            "opencloudtouch.devices.service.get_device_client",
+            return_value=mock_client,
+        ):
+            result = await device_service.set_mute("AABBCC112233", True)
+
+        assert result.muted is True
+        mock_client.set_mute.assert_awaited_once_with(True)
+
+    @pytest.mark.asyncio
+    async def test_set_mute_device_not_found(self, device_service, mock_repository):
+        """Test set_mute raises ValueError for unknown device."""
+        mock_repository.get_by_device_id.return_value = None
+
+        with pytest.raises(ValueError, match="not found"):
+            await device_service.set_mute("NONEXISTENT", True)
+
+
+class TestDeviceServiceNowPlaying:
+    """Tests for now playing method."""
+
+    @pytest.mark.asyncio
+    async def test_get_now_playing_success(
+        self, device_service, mock_repository, sample_device
+    ):
+        """Test get_now_playing returns NowPlayingInfo from device."""
+        mock_repository.get_by_device_id.return_value = sample_device
+        now_playing = NowPlayingInfo(
+            source="INTERNET_RADIO",
+            state="PLAY_STATE",
+            station_name="Jazz FM",
+            artist="Miles Davis",
+            track="So What",
+        )
+
+        mock_client = AsyncMock()
+        mock_client.get_now_playing = AsyncMock(return_value=now_playing)
+        mock_client.close = AsyncMock()
+
+        with patch(
+            "opencloudtouch.devices.service.get_device_client",
+            return_value=mock_client,
+        ):
+            result = await device_service.get_now_playing("AABBCC112233")
+
+        assert result.source == "INTERNET_RADIO"
+        assert result.station_name == "Jazz FM"
+        assert result.artist == "Miles Davis"
+        mock_client.get_now_playing.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_now_playing_device_not_found(
+        self, device_service, mock_repository
+    ):
+        """Test get_now_playing raises ValueError for unknown device."""
+        mock_repository.get_by_device_id.return_value = None
+
+        with pytest.raises(ValueError, match="not found"):
+            await device_service.get_now_playing("NONEXISTENT")

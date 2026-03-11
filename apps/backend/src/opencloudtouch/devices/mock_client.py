@@ -7,7 +7,12 @@ Provides deterministic responses that simulate device HTTP API.
 import logging
 from typing import Optional
 
-from opencloudtouch.devices.client import DeviceClient, DeviceInfo, NowPlayingInfo
+from opencloudtouch.devices.client import (
+    DeviceClient,
+    DeviceInfo,
+    NowPlayingInfo,
+    VolumeInfo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +110,8 @@ class MockDeviceClient(DeviceClient):
         """
         self.device_id = device_id
         self.ip_address = ip_address
+        self._volume = 45
+        self._muted = False
 
         if device_id not in self.MOCK_DEVICES:
             raise ValueError(
@@ -171,6 +178,21 @@ class MockDeviceClient(DeviceClient):
             f"[MOCK] press_key({key}, {state}) for device {self.device_id}",
             extra={"device_id": self.device_id, "key": key, "state": state},
         )
+
+    async def get_volume(self) -> VolumeInfo:
+        """Get mock volume state."""
+        logger.debug(f"[MOCK] get_volume() for device {self.device_id}")
+        return VolumeInfo(actual=self._volume, target=self._volume, muted=self._muted)
+
+    async def set_volume(self, level: int) -> None:
+        """Mock set volume."""
+        logger.info(f"[MOCK] set_volume({level}) for device {self.device_id}")
+        self._volume = max(0, min(100, level))
+
+    async def set_mute(self, muted: bool) -> None:
+        """Mock set mute."""
+        logger.info(f"[MOCK] set_mute({muted}) for device {self.device_id}")
+        self._muted = muted
 
     async def close(self) -> None:
         """Mock close (no-op)."""

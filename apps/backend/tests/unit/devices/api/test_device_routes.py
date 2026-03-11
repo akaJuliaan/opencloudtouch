@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from opencloudtouch.devices.client import NowPlayingInfo, VolumeInfo
 from opencloudtouch.core.dependencies import get_device_service, get_settings_service
 from opencloudtouch.devices.repository import Device
 from opencloudtouch.main import app
@@ -766,3 +767,173 @@ class TestDeleteAllDevicesEndpoint:
         data = response.json()
         assert data["message"] == "All devices deleted"
         mock_device_service.delete_all_devices.assert_awaited_once()
+
+
+class TestVolumeEndpoints:
+    """Tests for volume control endpoints."""
+
+    def test_get_volume_success(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/volume returns volume state."""
+        mock_device_service.get_volume = AsyncMock(
+            return_value=VolumeInfo(actual=42, target=42, muted=False)
+        )
+
+        response = client.get("/api/devices/DEV123/volume")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["actual"] == 42
+        assert data["target"] == 42
+        assert data["muted"] is False
+
+    def test_get_volume_device_not_found(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/volume with unknown device."""
+        mock_device_service.get_volume = AsyncMock(
+            side_effect=ValueError("Device DEV999 not found")
+        )
+
+        response = client.get("/api/devices/DEV999/volume")
+
+        assert response.status_code == 404
+
+    def test_get_volume_server_error(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/volume on connection failure."""
+        mock_device_service.get_volume = AsyncMock(
+            side_effect=Exception("Connection refused")
+        )
+
+        response = client.get("/api/devices/DEV123/volume")
+
+        assert response.status_code == 500
+
+    def test_set_volume_success(self, client, mock_device_service):
+        """Test PUT /api/devices/{id}/volume sets level."""
+        mock_device_service.set_volume = AsyncMock(
+            return_value=VolumeInfo(actual=70, target=70, muted=False)
+        )
+
+        response = client.put("/api/devices/DEV123/volume", json={"level": 70})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["actual"] == 70
+        mock_device_service.set_volume.assert_awaited_once_with("DEV123", 70)
+
+    def test_set_volume_out_of_range(self, client, mock_device_service):
+        """Test PUT /api/devices/{id}/volume rejects invalid level."""
+        response = client.put("/api/devices/DEV123/volume", json={"level": 150})
+
+        assert response.status_code == 422
+
+    def test_set_volume_device_not_found(self, client, mock_device_service):
+        """Test PUT /api/devices/{id}/volume with unknown device."""
+        mock_device_service.set_volume = AsyncMock(
+            side_effect=ValueError("Device DEV999 not found")
+        )
+
+        response = client.put("/api/devices/DEV999/volume", json={"level": 50})
+
+        assert response.status_code == 404
+
+
+class TestMuteEndpoint:
+    """Tests for mute endpoint."""
+
+    def test_set_mute_on(self, client, mock_device_service):
+        """Test PUT /api/devices/{id}/mute enables mute."""
+        mock_device_service.set_mute = AsyncMock(
+            return_value=VolumeInfo(actual=42, target=42, muted=True)
+        )
+
+        response = client.put("/api/devices/DEV123/mute", json={"muted": True})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["muted"] is True
+        mock_device_service.set_mute.assert_awaited_once_with("DEV123", True)
+
+    def test_set_mute_off(self, client, mock_device_service):
+        """Test PUT /api/devices/{id}/mute disables mute."""
+        mock_device_service.set_mute = AsyncMock(
+            return_value=VolumeInfo(actual=42, target=42, muted=False)
+        )
+
+        response = client.put("/api/devices/DEV123/mute", json={"muted": False})
+
+        assert response.status_code == 200
+        assert response.json()["muted"] is False
+
+    def test_set_mute_device_not_found(self, client, mock_device_service):
+        """Test PUT /api/devices/{id}/mute with unknown device."""
+        mock_device_service.set_mute = AsyncMock(
+            side_effect=ValueError("Device DEV999 not found")
+        )
+
+        response = client.put("/api/devices/DEV999/mute", json={"muted": True})
+
+        assert response.status_code == 404
+
+
+class TestNowPlayingEndpoint:
+    """Tests for now-playing endpoint."""
+
+    def test_get_now_playing_success(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/now-playing returns playback info."""
+        mock_device_service.get_now_playing = AsyncMock(
+            return_value=NowPlayingInfo(
+                source="INTERNET_RADIO",
+                state="PLAY_STATE",
+                station_name="Jazz FM",
+                artist="Miles Davis",
+                track="So What",
+                album="Kind of Blue",
+                artwork_url="http://example.com/art.jpg",
+            )
+        )
+
+        response = client.get("/api/devices/DEV123/now-playing")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source"] == "INTERNET_RADIO"
+        assert data["state"] == "PLAY_STATE"
+        assert data["station_name"] == "Jazz FM"
+        assert data["artist"] == "Miles Davis"
+        assert data["track"] == "So What"
+        assert data["artwork_url"] == "http://example.com/art.jpg"
+
+    def test_get_now_playing_standby(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/now-playing when device in standby."""
+        mock_device_service.get_now_playing = AsyncMock(
+            return_value=NowPlayingInfo(
+                source="STANDBY",
+                state="STOP_STATE",
+            )
+        )
+
+        response = client.get("/api/devices/DEV123/now-playing")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source"] == "STANDBY"
+        assert data["station_name"] is None
+
+    def test_get_now_playing_device_not_found(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/now-playing with unknown device."""
+        mock_device_service.get_now_playing = AsyncMock(
+            side_effect=ValueError("Device DEV999 not found")
+        )
+
+        response = client.get("/api/devices/DEV999/now-playing")
+
+        assert response.status_code == 404
+
+    def test_get_now_playing_server_error(self, client, mock_device_service):
+        """Test GET /api/devices/{id}/now-playing on connection failure."""
+        mock_device_service.get_now_playing = AsyncMock(
+            side_effect=Exception("Connection refused")
+        )
+
+        response = client.get("/api/devices/DEV123/now-playing")
+
+        assert response.status_code == 500

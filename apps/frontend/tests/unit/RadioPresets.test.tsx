@@ -31,6 +31,18 @@ vi.mock("../../src/api/presets", () => ({
   syncPresetsFromDevice: vi.fn(),
 }));
 
+// Mock device hooks
+const mockSetDeviceVolume = vi.fn();
+const mockToggleMute = vi.fn();
+let mockVolumeState = { volume: 45, muted: false, loading: false, setDeviceVolume: mockSetDeviceVolume, toggleMute: mockToggleMute };
+vi.mock("../../src/hooks/useVolume", () => ({
+  useVolume: () => mockVolumeState,
+}));
+
+vi.mock("../../src/hooks/useNowPlaying", () => ({
+  useNowPlaying: () => ({ nowPlaying: null, loading: false, error: null, refresh: vi.fn() }),
+}));
+
 import * as presetsApi from "../../src/api/presets";
 import type { PresetResponse } from "../../src/api/presets";
 import type { ReactNode } from "react";
@@ -137,6 +149,9 @@ describe("RadioPresets Page", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Reset volume hook mock state
+    mockVolumeState = { volume: 45, muted: false, loading: false, setDeviceVolume: mockSetDeviceVolume, toggleMute: mockToggleMute };
 
     // Setup default API mocks
     vi.mocked(presetsApi.getDevicePresets).mockResolvedValue([]);
@@ -408,7 +423,7 @@ describe("RadioPresets Page", () => {
       expect(screen.getByTestId("volume-input")).toHaveValue("45");
     });
 
-    it("should update volume when slider changes", async () => {
+    it("should call setDeviceVolume when slider changes", async () => {
       await act(async () => {
         render(<RadioPresets devices={mockDevices} />);
       });
@@ -418,10 +433,10 @@ describe("RadioPresets Page", () => {
         fireEvent.change(volumeInput, { target: { value: "75" } });
       });
 
-      expect(volumeInput).toHaveValue("75");
+      expect(mockSetDeviceVolume).toHaveBeenCalledWith(75);
     });
 
-    it("should toggle mute state", async () => {
+    it("should call toggleMute when mute button clicked", async () => {
       await act(async () => {
         render(<RadioPresets devices={mockDevices} />);
       });
@@ -435,13 +450,7 @@ describe("RadioPresets Page", () => {
       await act(async () => {
         fireEvent.click(muteButton);
       });
-      expect(muteButton).toHaveTextContent("Unmute");
-
-      // Toggle back
-      await act(async () => {
-        fireEvent.click(muteButton);
-      });
-      expect(muteButton).toHaveTextContent("Mute");
+      expect(mockToggleMute).toHaveBeenCalledTimes(1);
     });
   });
 

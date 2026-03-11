@@ -4,7 +4,7 @@ Tests for MockDeviceClient.
 
 import pytest
 
-from opencloudtouch.devices.client import DeviceInfo, NowPlayingInfo
+from opencloudtouch.devices.client import DeviceInfo, NowPlayingInfo, VolumeInfo
 from opencloudtouch.devices.mock_client import MockDeviceClient
 
 
@@ -115,3 +115,65 @@ class TestMockDeviceClient:
 
             assert now_playing.source
             assert now_playing.state
+
+
+class TestMockDeviceClientVolume:
+    """Tests for mock device client volume control."""
+
+    @pytest.mark.asyncio
+    async def test_get_volume_default(self):
+        """Test initial volume state."""
+        client = MockDeviceClient(device_id="AABBCC112233")
+        vol = await client.get_volume()
+
+        assert isinstance(vol, VolumeInfo)
+        assert vol.actual == 45
+        assert vol.target == 45
+        assert vol.muted is False
+
+    @pytest.mark.asyncio
+    async def test_set_volume(self):
+        """Test setting volume updates state."""
+        client = MockDeviceClient(device_id="AABBCC112233")
+        await client.set_volume(70)
+        vol = await client.get_volume()
+
+        assert vol.actual == 70
+        assert vol.target == 70
+
+    @pytest.mark.asyncio
+    async def test_set_volume_clamps_high(self):
+        """Test volume is clamped to max 100."""
+        client = MockDeviceClient(device_id="AABBCC112233")
+        await client.set_volume(150)
+        vol = await client.get_volume()
+
+        assert vol.actual == 100
+
+    @pytest.mark.asyncio
+    async def test_set_volume_clamps_low(self):
+        """Test volume is clamped to min 0."""
+        client = MockDeviceClient(device_id="AABBCC112233")
+        await client.set_volume(-10)
+        vol = await client.get_volume()
+
+        assert vol.actual == 0
+
+    @pytest.mark.asyncio
+    async def test_set_mute_on(self):
+        """Test muting the device."""
+        client = MockDeviceClient(device_id="AABBCC112233")
+        await client.set_mute(True)
+        vol = await client.get_volume()
+
+        assert vol.muted is True
+
+    @pytest.mark.asyncio
+    async def test_set_mute_off(self):
+        """Test unmuting the device."""
+        client = MockDeviceClient(device_id="AABBCC112233")
+        await client.set_mute(True)
+        await client.set_mute(False)
+        vol = await client.get_volume()
+
+        assert vol.muted is False

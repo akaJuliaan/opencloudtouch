@@ -15,7 +15,7 @@ from opencloudtouch.devices.capabilities import (
     get_capabilities_for_ip,
     get_feature_flags_for_ui,
 )
-from opencloudtouch.devices.client import NowPlayingInfo
+from opencloudtouch.devices.client import NowPlayingInfo, VolumeInfo
 from opencloudtouch.devices.interfaces import (
     IDeviceRepository,
     IDeviceSyncService,
@@ -319,3 +319,27 @@ class DeviceService:
             await client.press_key(key_value, state)
             now_playing = await client.get_now_playing()
         return now_playing
+
+    async def get_now_playing(self, device_id: str) -> NowPlayingInfo:
+        """Get now playing info for a device."""
+        async with self._device_client(device_id) as client:
+            return await client.get_now_playing()
+
+    async def get_volume(self, device_id: str) -> VolumeInfo:
+        """Get current volume state for a device."""
+        async with self._device_client(device_id) as client:
+            return await client.get_volume()
+
+    async def set_volume(self, device_id: str, level: int) -> VolumeInfo:
+        """Set volume level and return updated state."""
+        if not 0 <= level <= 100:
+            raise ValueError(f"Volume must be 0-100, got {level}")
+        async with self._device_client(device_id) as client:
+            await client.set_volume(level)
+            return await client.get_volume()
+
+    async def set_mute(self, device_id: str, muted: bool) -> VolumeInfo:
+        """Set mute state and return updated volume state."""
+        async with self._device_client(device_id) as client:
+            await client.set_mute(muted)
+            return await client.get_volume()

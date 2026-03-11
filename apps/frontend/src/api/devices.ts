@@ -142,3 +142,63 @@ export async function playPreset(deviceId: string, presetNumber: number): Promis
     throw new Error(getErrorMessage(errorData) || `Failed to play preset: ${response.statusText}`);
   }
 }
+
+// ---- Volume API ----
+
+export interface VolumeState {
+  actual: number;
+  target: number;
+  muted: boolean;
+}
+
+export async function getVolume(deviceId: string): Promise<VolumeState> {
+  const response = await fetch(`${API_BASE_URL}/api/devices/${deviceId}/volume`);
+  if (!response.ok) {
+    throw new Error(`Failed to get volume: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function setVolume(deviceId: string, level: number): Promise<VolumeState> {
+  const response = await fetch(`${API_BASE_URL}/api/devices/${deviceId}/volume`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ level }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to set volume: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function setMute(deviceId: string, muted: boolean): Promise<VolumeState> {
+  const response = await fetch(`${API_BASE_URL}/api/devices/${deviceId}/mute`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ muted }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to set mute: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// ---- Now Playing API ----
+
+export interface NowPlayingState {
+  source: string;
+  state: string;
+  station_name?: string;
+  artist?: string;
+  track?: string;
+  album?: string;
+  artwork_url?: string;
+}
+
+export async function getNowPlaying(deviceId: string): Promise<NowPlayingState> {
+  const response = await fetch(`${API_BASE_URL}/api/devices/${deviceId}/now-playing`);
+  if (!response.ok) {
+    throw new Error(`Failed to get now playing: ${response.statusText}`);
+  }
+  return response.json();
+}

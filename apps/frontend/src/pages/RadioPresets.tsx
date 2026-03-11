@@ -10,6 +10,8 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { PresetSkeleton } from "../components/LoadingSkeleton";
 import { playPreset as playPresetAPI } from "../api/devices";
 import { usePresets } from "../hooks/usePresets";
+import { useVolume } from "../hooks/useVolume";
+import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useToast } from "../contexts/ToastContext";
 import "./RadioPresets.css";
 
@@ -22,20 +24,28 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
   const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [assigningPreset, setAssigningPreset] = useState<number | null>(null);
-  const [volume, setVolume] = useState(45);
-  const [muted, setMuted] = useState(false);
 
   const currentDevice = devices[currentDeviceIndex];
 
   const { presets, loading, syncing, error, clearError, syncPresets, assignStation, removePreset } =
     usePresets(currentDevice?.device_id);
+  const { volume, muted, setDeviceVolume, toggleMute } = useVolume(currentDevice?.device_id);
+  const { nowPlaying: npState } = useNowPlaying(currentDevice?.device_id);
   const { show: showToast } = useToast();
   const [playError, setPlayError] = useState<string | null>(null);
   const [playLoading, setPlayLoading] = useState(false);
   const [confirmClear, setConfirmClear] = useState<number | null>(null);
 
-  // TODO: NowPlaying will be implemented in Phase 3 with backend endpoint
-  const nowPlaying = null;
+  // Map backend NowPlayingState to NowPlayingData for component
+  const nowPlaying = npState
+    ? {
+        art_url: npState.artwork_url,
+        station: npState.station_name,
+        track: npState.track,
+        artist: npState.artist,
+        play_status: npState.state,
+      }
+    : null;
 
   // Auto-select device from URL parameter on mount / when devices load
   useEffect(() => {
@@ -146,9 +156,9 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
 
           <VolumeSlider
             volume={volume}
-            onVolumeChange={setVolume}
+            onVolumeChange={setDeviceVolume}
             muted={muted}
-            onMuteToggle={() => setMuted(!muted)}
+            onMuteToggle={toggleMute}
           />
         </div>
       </DeviceSwiper>
