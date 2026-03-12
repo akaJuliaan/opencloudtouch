@@ -78,7 +78,7 @@ describe("Bose Cloud Emulator", () => {
         expect(resp.status).to.eq(200);
         const body =
           typeof resp.body === "string" ? JSON.parse(resp.body) : resp.body;
-        const services = body.services || [];
+        const services = body.bmx_services || [];
         const tuneIn = services.find(
           (s: { id: { name: string } }) => s.id.name === "TUNEIN"
         );
@@ -90,7 +90,7 @@ describe("Bose Cloud Emulator", () => {
       cy.request(`${BACKEND}/bmx/registry/v1/services`).then((resp) => {
         const body =
           typeof resp.body === "string" ? JSON.parse(resp.body) : resp.body;
-        const services = body.services || [];
+        const services = body.bmx_services || [];
         const rb = services.find(
           (s: { id: { name: string } }) => s.id.name === "RADIOBROWSER"
         );
@@ -102,7 +102,7 @@ describe("Bose Cloud Emulator", () => {
       cy.request(`${BACKEND}/bmx/registry/v1/services`).then((resp) => {
         const body =
           typeof resp.body === "string" ? JSON.parse(resp.body) : resp.body;
-        const services = body.services || [];
+        const services = body.bmx_services || [];
         services.forEach((s: { baseUrl: string }) => {
           expect(s.baseUrl).to.be.a("string");
           expect(s.baseUrl.length).to.be.greaterThan(0);
