@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { getErrorMessage, parseApiError } from "../api/types";
+import StationDetail from "./StationDetail";
 import "./RadioSearch.css";
 
 export interface RadioStation {
@@ -41,11 +42,27 @@ function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
 
+type SearchType = "name" | "country" | "tag";
+
+const SEARCH_TYPES: { value: SearchType; label: string }[] = [
+  { value: "name", label: "Name" },
+  { value: "country", label: "Land" },
+  { value: "tag", label: "Genre" },
+];
+
+const SEARCH_PLACEHOLDERS: Record<SearchType, string> = {
+  name: "z.B. SWR3, BBC Radio…",
+  country: "z.B. Germany, Austria…",
+  tag: "z.B. rock, jazz, pop…",
+};
+
 export default function RadioSearch({ onStationSelect, isOpen, onClose }: RadioSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<RadioStation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchType, setSearchType] = useState<SearchType>("name");
+  const [detailUuid, setDetailUuid] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -53,6 +70,18 @@ export default function RadioSearch({ onStationSelect, isOpen, onClose }: RadioS
     setQuery(searchQuery);
     setError(null);
     if (!searchQuery.trim()) {
+      setResults([]);
+      setLoading(false);
+      if (debounceRef.current !== null) {
+        window.clearTimeout(debounceRef.current);
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      return;
+    }
+
+    if (searchQuery.trim().length < 2) {
       setResults([]);
       setLoading(false);
       if (debounceRef.current !== null) {
@@ -79,7 +108,7 @@ export default function RadioSearch({ onStationSelect, isOpen, onClose }: RadioS
       try {
         const baseUrl = getApiBaseUrl();
         const response = await fetch(
-          `${baseUrl}/api/radio/search?q=${encodeURIComponent(searchQuery)}&search_type=name&limit=10`,
+          `${baseUrl}/api/radio/search?q=${encodeURIComponent(searchQuery)}&search_type=${searchType}&limit=10`,
           { signal: controller.signal }
         );
 
@@ -121,13 +150,14 @@ export default function RadioSearch({ onStationSelect, isOpen, onClose }: RadioS
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 500);
   };
 
   const handleSelect = async (station: RadioStation) => {
     await onStationSelect(station);
     setQuery("");
     setResults([]);
+    setDetailUuid(null);
     onClose?.();
   };
 
@@ -136,42 +166,75 @@ export default function RadioSearch({ onStationSelect, isOpen, onClose }: RadioS
   return (
     <div className="radio-search-overlay" onClick={onClose}>
       <div className="radio-search-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="search-header">
-          <input
-            type="search"
-            className="search-input"
-            placeholder="Sender suchen..."
-            value={query}
-            onChange={(e) => handleSearch(e.target.value)}
-            autoFocus
+        {detailUuid ? (
+          <StationDetail
+            stationUuid={detailUuid}
+            onBack={() => setDetailUuid(null)}
+            onSelect={(s) =>
+              handleSelect({
+                stationuuid: s.uuid,
+                name: s.name,
+                country: s.country,
+                url: s.url,
+                homepage: s.homepage ?? undefined,
+                favicon: s.favicon ?? undefined,
+              })
+            }
           />
-          <button
-            className="search-close"
-            onClick={onClose}
-            aria-label="Suche schließen"
-            title="Suche schließen"
-          >
-            ✕
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="search-header">
+              <input
+                type="search"
+                className="search-input"
+                placeholder={SEARCH_PLACEHOLDERS[searchType]}
+                value={query}
+                onChange={(e) => handleSearch(e.target.value)}
+                autoFocus
+              />
+              <button
+                className="search-close"
+                onClick={onClose}
+                aria-label="Suche schließen"
+                title="Suche schließen"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="search-type-row">
+              {SEARCH_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  className={`search-type-chip${searchType === t.value ? " active" : ""}`}
+                  onClick={() => {
+                    setSearchType(t.value);
+                    if (query.trim().length >= 2) handleSearch(query);
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-        <div className="search-results">
-          {error && <div className="search-error">{error}</div>}
-          {loading && <div className="search-loading">Suche...</div>}
-          {!loading && !error && results.length === 0 && query && (
-            <div className="search-empty">Keine Sender gefunden</div>
-          )}
-          {results.map((station) => (
-            <button
-              key={station.stationuuid}
-              className="search-result-item"
-              onClick={() => handleSelect(station)}
-            >
-              <div className="result-name">{station.name}</div>
-              <div className="result-country">{station.country}</div>
-            </button>
-          ))}
-        </div>
+            <div className="search-results">
+              {error && <div className="search-error">{error}</div>}
+              {loading && <div className="search-loading">Suche...</div>}
+              {!loading && !error && results.length === 0 && query && (
+                <div className="search-empty">Keine Sender gefunden</div>
+              )}
+              {results.map((station) => (
+                <button
+                  key={station.stationuuid}
+                  className="search-result-item"
+                  onClick={() => setDetailUuid(station.stationuuid)}
+                >
+                  <div className="result-name">{station.name}</div>
+                  <div className="result-country">{station.country}</div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

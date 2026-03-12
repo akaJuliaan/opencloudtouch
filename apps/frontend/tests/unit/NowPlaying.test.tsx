@@ -6,13 +6,13 @@
  * Focus: Functional tests for now playing display
  * - Show track, artist, station info
  * - Show album art or placeholder
- * - Show play/pause status
+ * - Play/Pause overlay on album art
  * - Handle missing data gracefully
  * - Empty state when nothing playing
  */
 
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import NowPlaying from "../../src/components/NowPlaying";
 
 describe("NowPlaying Component", () => {
@@ -80,32 +80,49 @@ describe("NowPlaying Component", () => {
     });
   });
 
-  describe("Play Status Icons", () => {
-    it("should show play icon (▶) when playing", () => {
+  describe("Play/Pause Overlay", () => {
+    it("should show Pause button overlay when playing and onPlayPause provided", () => {
       const nowPlaying = {
         station: "Test Station",
         track: "Test Track",
         play_status: "PLAY_STATE",
       };
 
-      render(<NowPlaying nowPlaying={nowPlaying} />);
+      const { container } = render(
+        <NowPlaying nowPlaying={nowPlaying} onPlayPause={vi.fn()} />
+      );
 
-      expect(screen.getByText("▶")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+      expect(container.querySelector(".np-play-overlay")).toBeInTheDocument();
     });
 
-    it("should show pause icon (⏸) when paused", () => {
+    it("should show Play button overlay when paused and onPlayPause provided", () => {
       const nowPlaying = {
         station: "Test Station",
         track: "Test Track",
         play_status: "PAUSE_STATE",
       };
 
-      render(<NowPlaying nowPlaying={nowPlaying} />);
+      render(<NowPlaying nowPlaying={nowPlaying} onPlayPause={vi.fn()} />);
 
-      expect(screen.getByText("⏸")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
     });
 
-    it("should apply playing CSS class when status is PLAY_STATE", () => {
+    it("should call onPlayPause when overlay clicked", () => {
+      const mockPlayPause = vi.fn();
+      const nowPlaying = {
+        station: "Test Station",
+        track: "Test Track",
+        play_status: "PLAY_STATE",
+      };
+
+      render(<NowPlaying nowPlaying={nowPlaying} onPlayPause={mockPlayPause} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+      expect(mockPlayPause).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not show overlay when onPlayPause not provided", () => {
       const nowPlaying = {
         station: "Test Station",
         track: "Test Track",
@@ -114,21 +131,7 @@ describe("NowPlaying Component", () => {
 
       const { container } = render(<NowPlaying nowPlaying={nowPlaying} />);
 
-      const statusIcon = container.querySelector(".status-icon");
-      expect(statusIcon).toHaveClass("playing");
-    });
-
-    it("should not apply playing CSS class when paused", () => {
-      const nowPlaying = {
-        station: "Test Station",
-        track: "Test Track",
-        play_status: "PAUSE_STATE",
-      };
-
-      const { container } = render(<NowPlaying nowPlaying={nowPlaying} />);
-
-      const statusIcon = container.querySelector(".status-icon");
-      expect(statusIcon).not.toHaveClass("playing");
+      expect(container.querySelector(".np-play-overlay")).not.toBeInTheDocument();
     });
   });
 
@@ -164,7 +167,6 @@ describe("NowPlaying Component", () => {
 
       const { container } = render(<NowPlaying nowPlaying={nowPlaying} />);
 
-      // Artist div should not exist when artist is not provided
       const artistElement = container.querySelector(".np-artist");
       expect(artistElement).not.toBeInTheDocument();
     });
@@ -193,7 +195,9 @@ describe("NowPlaying Component", () => {
         play_status: "PLAY_STATE",
       };
 
-      const { container } = render(<NowPlaying nowPlaying={nowPlaying} />);
+      const { container } = render(
+        <NowPlaying nowPlaying={nowPlaying} onPlayPause={vi.fn()} />
+      );
 
       expect(screen.getByText("Classic Rock FM")).toBeInTheDocument();
       expect(screen.getByText("Bohemian Rhapsody")).toBeInTheDocument();
@@ -202,7 +206,7 @@ describe("NowPlaying Component", () => {
       const img = container.querySelector(".np-art img");
       expect(img).toHaveAttribute("src", "https://example.com/art.jpg");
 
-      expect(screen.getByText("▶")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
     });
 
     it("should handle minimal data with only track", () => {
@@ -211,12 +215,12 @@ describe("NowPlaying Component", () => {
         play_status: "PAUSE_STATE",
       };
 
-      render(<NowPlaying nowPlaying={nowPlaying} />);
+      render(<NowPlaying nowPlaying={nowPlaying} onPlayPause={vi.fn()} />);
 
       expect(screen.getByText("Unknown Station")).toBeInTheDocument();
       expect(screen.getByText("Unknown Artist Song")).toBeInTheDocument();
       expect(screen.getByText("🎵")).toBeInTheDocument();
-      expect(screen.getByText("⏸")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
     });
   });
 });

@@ -1,48 +1,44 @@
-/* Volume Slider */
+/* Volume Slider - YouTube-style compact control */
 .volume-slider {
   display: flex;
   align-items: center;
-  /* REFACT-142: Explicit min 12px gap prevents misclick between icon and slider */
-  gap: 12px;
-  padding: var(--space-md);
-  background-color: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  gap: 10px;
+  padding: 0 12px;
+  height: 40px;
   border-radius: var(--border-radius-md);
+  background-color: var(--color-bg-darker);
 }
 
 .volume-mute {
-  width: 44px;
-  height: 44px;
-  font-size: 20px;
-  border-radius: var(--border-radius-sm);
-  background-color: var(--color-bg-darker);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
   min-width: auto;
   min-height: auto;
-  transition: all 0.2s ease;
+  outline: none;
+  color: var(--color-text-primary);
 }
 
-.volume-mute:hover:not(:disabled) {
-  background-color: var(--color-border);
+.volume-mute:hover {
+  opacity: 0.8;
 }
 
-.volume-mute.muted {
-  background-color: #cc0000;
+.volume-mute.muted svg path {
+  fill: #cc4444;
 }
 
 .volume-input {
   flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(
-    to right,
-    var(--color-accent) 0%,
-    var(--color-accent) var(--volume-percent, 50%),
-    var(--color-border) var(--volume-percent, 50%),
-    var(--color-border) 100%
-  );
-  outline: none;
+  min-width: 0;
   -webkit-appearance: none;
   appearance: none;
+  height: 3px;
+  outline: none;
+  cursor: pointer;
+  border-radius: 2px;
 }
 
 .volume-input:focus-visible {
@@ -52,23 +48,19 @@
 
 .volume-input::-webkit-slider-thumb {
   -webkit-appearance: none;
-  appearance: none;
-  width: 24px;
-  height: 24px;
+  height: 12px;
+  width: 12px;
   border-radius: 50%;
-  background-color: var(--color-accent);
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: #fff;
+  border: none;
 }
 
 .volume-input::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
+  height: 12px;
+  width: 12px;
   border-radius: 50%;
-  background-color: var(--color-accent);
-  cursor: pointer;
+  background: #fff;
   border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .volume-input:disabled {

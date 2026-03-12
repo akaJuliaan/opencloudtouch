@@ -107,52 +107,47 @@ describe("VolumeSlider Component", () => {
   });
 
   describe("Dynamic Icon Display", () => {
-    it("should show mute icon (🔇) when muted", () => {
+    it("should show SVG icon in mute button when muted", () => {
+      const { container } = render(
+        <VolumeSlider volume={50} onVolumeChange={vi.fn()} muted={true} onMuteToggle={vi.fn()} />
+      );
+
+      const svg = container.querySelector(".volume-mute svg");
+      expect(svg).toBeInTheDocument();
+    });
+
+    it("should show SVG icon in mute button when not muted", () => {
+      const { container } = render(
+        <VolumeSlider volume={75} onVolumeChange={vi.fn()} muted={false} onMuteToggle={vi.fn()} />
+      );
+
+      const svg = container.querySelector(".volume-mute svg");
+      expect(svg).toBeInTheDocument();
+    });
+
+    it("should apply muted class to button when muted", () => {
       render(
         <VolumeSlider volume={50} onVolumeChange={vi.fn()} muted={true} onMuteToggle={vi.fn()} />
       );
 
-      expect(screen.getByText("🔇")).toBeInTheDocument();
-    });
-
-    it("should show high volume icon (🔊) when volume > 50", () => {
-      render(
-        <VolumeSlider volume={75} onVolumeChange={vi.fn()} muted={false} onMuteToggle={vi.fn()} />
-      );
-
-      expect(screen.getByText("🔊")).toBeInTheDocument();
-    });
-
-    it("should show medium volume icon (🔉) when 0 < volume <= 50", () => {
-      render(
-        <VolumeSlider volume={30} onVolumeChange={vi.fn()} muted={false} onMuteToggle={vi.fn()} />
-      );
-
-      expect(screen.getByText("🔉")).toBeInTheDocument();
-    });
-
-    it("should show low volume icon (🔈) when volume = 0", () => {
-      render(
-        <VolumeSlider volume={0} onVolumeChange={vi.fn()} muted={false} onMuteToggle={vi.fn()} />
-      );
-
-      expect(screen.getByText("🔈")).toBeInTheDocument();
+      const muteButton = screen.getByRole("button", { name: "Unmute" });
+      expect(muteButton).toHaveClass("muted");
     });
   });
 
   describe("Edge Cases", () => {
     it("should handle volume at boundary (exactly 50)", () => {
-      render(
+      const { container } = render(
         <VolumeSlider volume={50} onVolumeChange={vi.fn()} muted={false} onMuteToggle={vi.fn()} />
       );
 
-      // volume === 50 should show medium icon (not high)
-      expect(screen.getByText("🔉")).toBeInTheDocument();
+      // SVG icon should be present
+      expect(container.querySelector(".volume-mute svg")).toBeInTheDocument();
     });
 
     it("should handle volume at maximum (100)", () => {
       const mockOnVolumeChange = vi.fn();
-      render(
+      const { container } = render(
         <VolumeSlider
           volume={100}
           onVolumeChange={mockOnVolumeChange}
@@ -162,7 +157,7 @@ describe("VolumeSlider Component", () => {
       );
 
       expect(screen.getByRole("slider")).toHaveValue("100");
-      expect(screen.getByText("🔊")).toBeInTheDocument();
+      expect(container.querySelector(".volume-mute svg")).toBeInTheDocument();
     });
 
     it("should parse string values to integers", () => {

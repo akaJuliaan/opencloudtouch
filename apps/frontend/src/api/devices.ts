@@ -202,3 +202,13 @@ export async function getNowPlaying(deviceId: string): Promise<NowPlayingState> 
   }
   return response.json();
 }
+
+export async function togglePlayPause(deviceId: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/devices/${deviceId}/key?key=PLAY_PAUSE&state=both`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to toggle play/pause: ${response.statusText}`);
+  }
+}

@@ -8,7 +8,7 @@ import RadioSearch, { RadioStation } from "../components/RadioSearch";
 import VolumeSlider from "../components/VolumeSlider";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { PresetSkeleton } from "../components/LoadingSkeleton";
-import { playPreset as playPresetAPI } from "../api/devices";
+import { playPreset as playPresetAPI, togglePlayPause } from "../api/devices";
 import { usePresets } from "../hooks/usePresets";
 import { useVolume } from "../hooks/useVolume";
 import { useNowPlaying } from "../hooks/useNowPlaying";
@@ -152,7 +152,10 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
             )}
           </div>
 
-          <NowPlaying nowPlaying={nowPlaying} />
+          <NowPlaying
+            nowPlaying={nowPlaying}
+            onPlayPause={currentDevice ? () => togglePlayPause(currentDevice.device_id) : undefined}
+          />
 
           <VolumeSlider
             volume={volume}

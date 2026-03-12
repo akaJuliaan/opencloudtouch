@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from opencloudtouch.api import devices_router
+from opencloudtouch.bmx.radiobrowser_routes import radiobrowser_router
 from opencloudtouch.bmx.resolve_routes import resolve_router
 from opencloudtouch.devices.api.discovery_routes import discovery_router
 from opencloudtouch.bmx.routes import router as bmx_router
@@ -40,12 +41,14 @@ from opencloudtouch.presets.api.routes import router as presets_router
 from opencloudtouch.presets.api.station_routes import router as stations_router
 from opencloudtouch.presets.repository import PresetRepository
 from opencloudtouch.presets.service import PresetService
+from opencloudtouch.recents.repository import RecentsRepository
 from opencloudtouch.radio.api.routes import router as radio_router
 from opencloudtouch.settings.repository import SettingsRepository
 from opencloudtouch.settings.routes import router as settings_router
 from opencloudtouch.settings.service import SettingsService
 from opencloudtouch.setup.routes import router as setup_router
 from opencloudtouch.setup.wizard_routes import wizard_router
+from opencloudtouch.swupdate.routes import router as swupdate_router
 
 # Module-level logger
 logger = logging.getLogger(__name__)
@@ -91,6 +94,12 @@ async def lifespan(app: FastAPI):
     await preset_repo.initialize()
     app.state.preset_repo = preset_repo
     logger.info("Preset repository initialized")
+
+    # Initialize recents repository
+    recents_repo = RecentsRepository(cfg.effective_db_path)
+    await recents_repo.initialize()
+    app.state.recents_repo = recents_repo
+    logger.info("Recents repository initialized")
 
     # Initialize preset service (needs device_repo for /storePreset)
     preset_service = PresetService(preset_repo, device_repo)
@@ -138,6 +147,9 @@ async def lifespan(app: FastAPI):
 
     await preset_repo.close()
     logger.info("Preset repository closed")
+
+    await recents_repo.close()
+    logger.info("Recents repository closed")
 
     logger.info("OpenCloudTouch shutting down")
 
@@ -195,11 +207,13 @@ app.include_router(stations_router)  # Station descriptors for SoundTouch device
 app.include_router(device_preset_stream_router)  # Stream proxy for Bose presets
 app.include_router(device_descriptor_router)  # Preset descriptors (XML) for Bose
 app.include_router(bmx_router)  # BMX stream resolution for Bose devices
+app.include_router(radiobrowser_router)  # BMX RadioBrowser playback
 app.include_router(resolve_router)  # Legacy BMX resolve endpoint
 app.include_router(marge_router)  # Marge (streaming.bose.com) account sync
 app.include_router(playlist_router)  # M3U/PLS playlist files for Bose presets
 app.include_router(setup_router)  # Device setup wizard
 app.include_router(wizard_router)  # SSH-driven wizard step endpoints
+app.include_router(swupdate_router)  # SWUpdate firmware index emulation
 
 
 # Health endpoint

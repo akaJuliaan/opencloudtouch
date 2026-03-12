@@ -1186,6 +1186,89 @@ paths:
           content:
             application/json:
               schema: {}
+  /bmx/radiobrowser/v1/playback/station/{uuid}:
+    get:
+      tags:
+      - bmx
+      summary: Bmx Radiobrowser Playback
+      description: 'Resolve RadioBrowser station UUID to stream URL.
+
+
+        The device calls this with a station UUID and expects a BMX-format
+
+        JSON response with stream URLs for playback.'
+      operationId: bmx_radiobrowser_playback_bmx_radiobrowser_v1_playback_station__uuid__get
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Uuid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /bmx/radiobrowser/v1/now-playing/station/{uuid}:
+    get:
+      tags:
+      - bmx
+      summary: Bmx Radiobrowser Now Playing
+      description: Now-playing stub for RadioBrowser stations.
+      operationId: bmx_radiobrowser_now_playing_bmx_radiobrowser_v1_now_playing_station__uuid__get
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Uuid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /bmx/radiobrowser/v1/reporting/station/{uuid}:
+    post:
+      tags:
+      - bmx
+      summary: Bmx Radiobrowser Reporting
+      description: Reporting stub for RadioBrowser stations.
+      operationId: bmx_radiobrowser_reporting_bmx_radiobrowser_v1_reporting_station__uuid__post
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Uuid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/systems/devices/{device_id}:
     get:
       tags:
@@ -2124,6 +2207,41 @@ paths:
           content:
             application/json:
               schema: {}
+  /updates/soundtouch:
+    get:
+      tags:
+      - swupdate
+      summary: Firmware Index
+      description: Return firmware INDEX.XML for SoundTouch devices.
+      operationId: firmware_index_updates_soundtouch_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/xml:
+              schema:
+                type: string
+  /ced/eup/downloads/rel/{filename}:
+    get:
+      tags:
+      - swupdate
+      summary: Firmware Download
+      description: Firmware download endpoint (blocked by OCT).
+      operationId: firmware_download_ced_eup_get
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '404':
+          description: Firmware downloads disabled
+          content:
+            application/xml:
+              schema:
+                type: string
 components:
   schemas:
     BackupRequest:
