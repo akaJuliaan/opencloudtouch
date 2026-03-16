@@ -238,16 +238,6 @@ export default function RadioSearch({
                 onChange={(e) => handleSearch(e.target.value)}
                 autoFocus
               />
-              {hasExistingPreset && onDelete && (
-                <button
-                  className="search-delete-btn"
-                  onClick={onDelete}
-                  aria-label="Preset löschen"
-                  title="Preset löschen"
-                >
-                  🗑️
-                </button>
-              )}
               <button
                 className="search-close"
                 onClick={onClose}
@@ -271,6 +261,19 @@ export default function RadioSearch({
                 </button>
               ))}
             </div>
+
+            {hasExistingPreset && onDelete && (
+              <div className="search-delete-row">
+                <button
+                  className="search-delete-btn"
+                  onClick={onDelete}
+                  aria-label="Preset löschen"
+                  title="Preset löschen"
+                >
+                  Preset löschen
+                </button>
+              </div>
+            )}
 
             <div className="search-results">
               {error && <div className="search-error">{error}</div>}

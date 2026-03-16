@@ -279,6 +279,25 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
         </div>
       </div>
 
+      {/* Info Box */}
+      <div className="presets-info-box">
+        <div className="presets-info-icon">ℹ️</div>
+        <div className="presets-info-content">
+          <h4 className="presets-info-title">Preset Hinweise</h4>
+          <ul className="presets-info-list">
+            <li>Klicke auf ein leeres Preset um einen Sender zuzuweisen</li>
+            <li>Klicke auf einen belegten Sender um ihn zu ändern oder zu löschen</li>
+            <li>▶ spielt den gespeicherten Sender direkt ab</li>
+            <li>
+              <span className="badge-example compatible">✓</span> = Cloud-unabhängig,{" "}
+              <span className="badge-example dependent">☁</span> = Bose Cloud erforderlich
+            </li>
+            <li>⚙️ öffnet den Setup-Wizard für das Gerät</li>
+            <li>&bdquo;Vom Gerät laden&ldquo; synchronisiert die Presets vom SoundTouch</li>
+          </ul>
+        </div>
+      </div>
+
       {/* Radio Search Modal */}
       <RadioSearch
         isOpen={searchOpen}

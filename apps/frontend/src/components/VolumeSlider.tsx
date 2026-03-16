@@ -42,6 +42,7 @@ export default function VolumeSlider({
         min="0"
         max="100"
         value={volume}
+        onInput={(e) => onVolumeChange(parseInt((e.target as HTMLInputElement).value))}
         onChange={(e) => onVolumeChange(parseInt(e.target.value))}
         aria-label="Volume"
         style={{ background: sliderBg }}

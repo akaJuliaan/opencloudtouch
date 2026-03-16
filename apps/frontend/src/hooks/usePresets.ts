@@ -164,6 +164,8 @@ export function usePresets(deviceId: string | undefined): UsePresetsResult {
         [presetNumber]: {
           station_name: station.name,
           station_favicon: station.favicon,
+          station_url: station.url,
+          source: "LOCAL_INTERNET_RADIO",
         },
       }));
     } catch (err) {

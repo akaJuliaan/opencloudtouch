@@ -35,10 +35,14 @@
   min-width: 0;
   -webkit-appearance: none;
   appearance: none;
-  height: 3px;
+  height: 6px;
   outline: none;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 3px;
+  touch-action: none;
+  padding: 8px 0;
+  margin: -8px 0;
+  box-sizing: content-box;
 }
 
 .volume-input:focus-visible {
@@ -48,19 +52,21 @@
 
 .volume-input::-webkit-slider-thumb {
   -webkit-appearance: none;
-  height: 12px;
-  width: 12px;
+  height: 20px;
+  width: 20px;
   border-radius: 50%;
   background: #fff;
   border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .volume-input::-moz-range-thumb {
-  height: 12px;
-  width: 12px;
+  height: 20px;
+  width: 20px;
   border-radius: 50%;
   background: #fff;
   border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .volume-input.muted {
