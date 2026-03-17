@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import "./VolumeSlider.css";
 
 interface VolumeSliderProps {
@@ -38,7 +38,17 @@ export default function VolumeSlider({
   onVolumeChangeRef.current = onVolumeChange;
   const lastSentAt = useRef<number>(0);
 
-  const fillColor = muted ? MUTED_COLOR : ACCENT_COLOR;
+  // Sync prop → DOM only when NOT dragging.
+  // During drag, refs control the visual position exclusively.
+  useEffect(() => {
+    if (isDragging.current) return;
+    const pct = `${volume}%`;
+    if (fillRef.current) {
+      fillRef.current.style.width = pct;
+      fillRef.current.style.backgroundColor = muted ? MUTED_COLOR : ACCENT_COLOR;
+    }
+    if (thumbRef.current) thumbRef.current.style.left = pct;
+  }, [volume, muted]);
 
   const calcValue = (clientX: number): number => {
     if (!trackRef.current) return volume;
@@ -88,7 +98,9 @@ export default function VolumeSlider({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    onVolumeChangeRef.current(calcValue(e.clientX));
+    const finalVal = calcValue(e.clientX);
+    applyValueDOM(finalVal);
+    onVolumeChangeRef.current(finalVal);
   };
 
   return (
@@ -123,12 +135,8 @@ export default function VolumeSlider({
         }}
       >
         <div className="volume-track-bg" />
-        <div
-          ref={fillRef}
-          className="volume-track-fill"
-          style={{ width: `${volume}%`, backgroundColor: fillColor }}
-        />
-        <div className="volume-thumb" style={{ left: `${volume}%` }} />
+        <div ref={fillRef} className="volume-track-fill" />
+        <div ref={thumbRef} className="volume-thumb" />
       </div>
     </div>
   );
