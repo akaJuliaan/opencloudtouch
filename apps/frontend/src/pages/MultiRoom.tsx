@@ -15,6 +15,20 @@ interface MultiRoomProps {
   readonly devices?: Device[];
 }
 
+// ---- Zone icon SVG (lighter color for dark card backgrounds) ----
+const ZONE_MUSIC_PATH =
+  "M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z";
+
+function ZoneIcon() {
+  return (
+    <span className="zone-icon">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path fill="#7ab8e8" d={ZONE_MUSIC_PATH} />
+      </svg>
+    </span>
+  );
+}
+
 // ---- Zone Volume per Member ----
 
 function ZoneMemberVolume({ deviceId }: Readonly<{ deviceId: string }>) {
@@ -212,7 +226,7 @@ export default function MultiRoom({ devices = [] }: Readonly<MultiRoomProps>) {
         <h1 className="page-title">Multi-Room Zonen</h1>
         <div className="zone-card" style={{ opacity: 0.5 }}>
           <div className="zone-header">
-            <span className="zone-icon">🎵</span>
+            <ZoneIcon />
             <h3 className="zone-name">Lade Zonen...</h3>
           </div>
         </div>
@@ -262,7 +276,7 @@ export default function MultiRoom({ devices = [] }: Readonly<MultiRoomProps>) {
                   transition={{ duration: 0.2 }}
                 >
                   <div className="zone-header">
-                    <span className="zone-icon">🎵</span>
+                    <ZoneIcon />
                     <EditableZoneName
                       name={zoneName}
                       onSave={(name) => setZoneName(zone.master_id, name)}

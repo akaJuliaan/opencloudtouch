@@ -14,6 +14,9 @@ interface NowPlayingProps {
   onPlayPause?: () => void;
 }
 
+const MUSIC_NOTE_PATH =
+  "M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z";
+
 const BT_ICON =
   "M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z";
 const RADIO_ICON =
@@ -64,7 +67,11 @@ export default function NowPlaying({ nowPlaying, onPlayPause }: NowPlayingProps)
         {nowPlaying.art_url ? (
           <img src={nowPlaying.art_url} alt="" />
         ) : (
-          <div className="np-art-placeholder">🎵</div>
+          <div className="np-art-placeholder">
+            <svg viewBox="0 0 24 24" width="64" height="64" aria-hidden="true">
+              <path fill="rgba(120, 180, 220, 0.45)" d={MUSIC_NOTE_PATH} />
+            </svg>
+          </div>
         )}
         {onPlayPause && (
           <button

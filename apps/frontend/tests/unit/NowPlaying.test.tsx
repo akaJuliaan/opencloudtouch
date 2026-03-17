@@ -74,9 +74,9 @@ describe("NowPlaying Component", () => {
         play_status: "PLAY_STATE",
       };
 
-      render(<NowPlaying nowPlaying={nowPlaying} />);
+      const { container } = render(<NowPlaying nowPlaying={nowPlaying} />);
 
-      expect(screen.getByText("🎵")).toBeInTheDocument();
+      expect(container.querySelector(".np-art-placeholder svg")).toBeInTheDocument();
     });
   });
 
@@ -215,11 +215,11 @@ describe("NowPlaying Component", () => {
         play_status: "PAUSE_STATE",
       };
 
-      render(<NowPlaying nowPlaying={nowPlaying} onPlayPause={vi.fn()} />);
+      const { container } = render(<NowPlaying nowPlaying={nowPlaying} onPlayPause={vi.fn()} />);
 
       expect(screen.getByText("Kein Sender")).toBeInTheDocument();
       expect(screen.getByText("Unknown Artist Song")).toBeInTheDocument();
-      expect(screen.getByText("🎵")).toBeInTheDocument();
+      expect(container.querySelector(".np-art-placeholder svg")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
     });
   });

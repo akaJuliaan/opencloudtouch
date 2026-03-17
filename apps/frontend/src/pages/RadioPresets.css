@@ -38,9 +38,9 @@
 }
 
 .device-name {
-  font-size: 16px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -68,6 +68,7 @@ export default function VolumeSlider({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation(); // prevent card swipe (Framer Motion drag) on mobile
     isDragging.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
     lastClientX.current = e.clientX;

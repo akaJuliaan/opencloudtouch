@@ -102,6 +102,10 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
+vi.mock("../../src/components/SetupBadge", () => ({
+  default: () => <span data-testid="setup-badge" />,
+}));
+
 const mockDevices = [
   {
     device_id: "ST10-001",

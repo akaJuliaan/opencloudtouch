@@ -58,8 +58,8 @@
 
 .zone-device {
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
+  flex-direction: column;
+  gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
   background-color: var(--color-bg-darker);
   border-radius: var(--border-radius-sm);
@@ -345,8 +345,8 @@
 
 /* ---- Zone Member Volume ---- */
 .zone-member-volume {
-  margin-top: var(--space-xs);
-  padding: 0 var(--space-xs);
+  width: 100%;
+  padding: 0;
 }
 
 .zone-device-header {
@@ -359,9 +359,9 @@
 button.zone-name.editable {
   all: unset;
   cursor: pointer;
-  font-size: inherit;
-  font-weight: inherit;
-  color: inherit;
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
   border-bottom: 1px dashed var(--color-text-secondary);
   transition: border-color 0.2s;
 }

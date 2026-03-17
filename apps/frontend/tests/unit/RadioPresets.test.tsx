@@ -136,6 +136,10 @@ vi.mock("../../src/components/RadioSearch", () => ({
   },
 }));
 
+vi.mock("../../src/components/SetupBadge", () => ({
+  default: () => <span data-testid="setup-badge" />,
+}));
+
 describe("RadioPresets Page", () => {
   const mockDevices = [
     {

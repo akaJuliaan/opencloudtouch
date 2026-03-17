@@ -47,6 +47,16 @@
 .np-art-placeholder {
   font-size: 64px;
   opacity: 0.3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* On mobile the play button is always visible — hide placeholder to avoid show-through */
+@media (hover: none), (max-width: 768px) {
+  .np-art-placeholder {
+    visibility: hidden;
+  }
 }
 
 /* Play/Pause overlay button */
