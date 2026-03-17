@@ -482,7 +482,8 @@ class BoseDeviceClientAdapter(DeviceClient):
     async def remove_zone(self) -> None:
         """Dissolve entire zone."""
         try:
-            self._client.RemoveZone(delay=1)
+            self._client.RemoveZone(delay=3)
+            logger.info("Zone removed on %s", self.base_url)
         except Exception as e:
             logger.error(
                 f"Failed to remove zone on {self.base_url}: {e}", exc_info=True

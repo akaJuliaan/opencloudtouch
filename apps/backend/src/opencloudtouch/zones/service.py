@@ -77,9 +77,19 @@ class ZoneService:
         async def _fetch_zone(device):
             try:
                 client = self._get_client(device.ip)
-                return await client.get_zone_status()
+                status = await client.get_zone_status()
+                if status:
+                    logger.debug(
+                        "Zone from %s (is_master=%s): master=%s, members=%d [%s]",
+                        device.device_id,
+                        status.is_master,
+                        status.master_id,
+                        len(status.members),
+                        ", ".join(m.device_id for m in status.members),
+                    )
+                return status
             except Exception:
-                logger.debug(f"Could not get zone for {device.device_id}: skipped")
+                logger.debug("Could not get zone for %s: skipped", device.device_id)
                 return None
 
         results = await asyncio.gather(*[_fetch_zone(d) for d in devices])
@@ -99,10 +109,16 @@ class ZoneService:
         zones: list[ZoneStatus] = [
             self._enrich_zone_status(s, devices) for s in zone_map.values()
         ]
+        logger.info(
+            "get_all_zones: %d zone(s), members: %s",
+            len(zones),
+            {z.master_id: len(z.members) for z in zones},
+        )
         return zones
 
     async def create_zone(self, master_id: str, slave_ids: list[str]) -> ZoneStatus:
         """Create a new multi-room zone."""
+        logger.info("Creating zone: master=%s, slaves=%s", master_id, slave_ids)
         master = await self._get_device_or_raise(master_id)
         slaves = []
         for sid in slave_ids:
@@ -118,8 +134,15 @@ class ZoneService:
         try:
             status = await client.create_zone(master.ip, members)
         except Exception as e:
+            logger.error("Failed to create zone master=%s: %s", master_id, e)
             raise DeviceConnectionError(master.ip, str(e))
 
+        logger.info(
+            "Zone created: master=%s, members=%d [%s]",
+            master_id,
+            len(status.members),
+            ", ".join(m.device_id for m in status.members),
+        )
         devices = await self.device_repo.get_all()
         return self._enrich_zone_status(status, devices)
 
@@ -163,11 +186,14 @@ class ZoneService:
 
     async def dissolve_zone(self, master_id: str) -> None:
         """Dissolve an existing zone."""
+        logger.info("Dissolving zone with master_id=%s", master_id)
         master = await self._get_device_or_raise(master_id)
         client = self._get_client(master.ip)
         try:
             await client.remove_zone()
+            logger.info("Zone dissolved successfully for master_id=%s", master_id)
         except Exception as e:
+            logger.error("Failed to dissolve zone master_id=%s: %s", master_id, e)
             raise DeviceConnectionError(master.ip, str(e))
 
     async def change_master(self, old_master_id: str, new_master_id: str) -> ZoneStatus:

@@ -35,9 +35,17 @@ export function useZones(): UseZonesResult {
   const isMutating = useRef(false);
 
   const fetchZones = useCallback(async () => {
-    if (isMutating.current) return;
+    if (isMutating.current) {
+      console.debug("[useZones] Skipping poll (mutation in progress)");
+      return;
+    }
     try {
       const data = await getZones();
+      console.debug(
+        "[useZones] Fetched %d zone(s): %s",
+        data.length,
+        data.map((z) => `${z.master_id}(${z.members.length}m)`).join(", ")
+      );
       setZones(data);
       setError(null);
     } catch (err) {
@@ -58,8 +66,12 @@ export function useZones(): UseZonesResult {
   const createZone = useCallback(
     async (masterId: string, slaveIds: string[]): Promise<ZoneInfo> => {
       isMutating.current = true;
+      console.info("[useZones] Creating zone: master=%s, slaves=%s", masterId, slaveIds);
       try {
         const result = await createZoneApi(masterId, slaveIds);
+        console.info("[useZones] Zone created, waiting 3s for device sync...");
+        // Give SoundTouch devices time to fully form the zone before polling
+        await new Promise((r) => setTimeout(r, 3000));
         await fetchZones();
         return result;
       } catch (err) {
@@ -76,12 +88,18 @@ export function useZones(): UseZonesResult {
     isMutating.current = true;
     try {
       await dissolveZoneApi(masterId);
+      console.info("[useZones] Zone dissolved: %s (suppressing polls for 15s)", masterId);
       setZones((prev) => prev.filter((z) => z.master_id !== masterId));
+      // Keep isMutating true for 15s so polling doesn't re-fetch the zone
+      // before the SoundTouch device has fully dissolved it.
+      setTimeout(() => {
+        isMutating.current = false;
+        console.debug("[useZones] Polling re-enabled after dissolve cooldown");
+      }, 15_000);
     } catch (err) {
+      isMutating.current = false;
       setError(err instanceof Error ? err.message : "Failed to dissolve zone");
       throw err;
-    } finally {
-      isMutating.current = false;
     }
   }, []);
 
