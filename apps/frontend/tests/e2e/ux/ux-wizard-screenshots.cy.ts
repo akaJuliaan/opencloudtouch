@@ -648,11 +648,11 @@ describe("UX Screenshots — Setup Wizard (Vollständiger Durchlauf)", () => {
       cy.viewport(375, 812);
     });
 
-    it("wiz_mob_a — Mobile: Modus-Auswahl", () => {
+    it("wiz_mob_a — Mobile: Wizard-Start (Step 1)", () => {
       cy.visit(`/setup-wizard?deviceId=${DEVICE.device_id}`);
       cy.wait("@getDevices");
-      cy.get(".mode-selector-container", { timeout: 8000 }).should("exist");
-      screenshotBoth("wiz_mob_a_mode-selection__mobile-375");
+      cy.get(".setup-wizard-page-v2", { timeout: 8000 }).should("exist");
+      screenshotBoth("wiz_mob_a_wizard-start__mobile-375");
     });
 
     it("wiz_mob_b — Mobile: USB-Vorbereitung", () => {
