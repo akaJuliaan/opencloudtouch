@@ -94,6 +94,9 @@ LABEL org.opencontainers.image.title="OpenCloudTouch" \
 
 WORKDIR /app
 
+# Apply OS security patches (fixes CVE-2026-0861 glibc and other HIGH vulns in base image)
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
 # Copy Python dependencies from build stage
 COPY --from=python-deps /install /usr/local
 
