@@ -11,14 +11,14 @@
 #   docker inspect --format='{{.RepoDigests}}' <image>:<tag>
 #
 # Current versions:
-#   Node.js: 20.11-alpine (Alpine 3.19)
+#   Node.js: 20-slim (Debian Bookworm, glibc — required for Rolldown ARM bindings)
 #   Python: 3.11.8-slim (Debian Bookworm)
 
 # Stage 1: Build Frontend
-FROM node:20-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8 AS frontend-builder
-
-# Get build architecture from buildx
-ARG TARGETARCH
+# Using Debian slim instead of Alpine because Vite 8 uses Rolldown which
+# has no musl binding for linux/arm/v7 (@rolldown/binding-linux-arm-musleabihf).
+# Debian (glibc) supports all target architectures via @rolldown/binding-linux-arm-gnueabihf.
+FROM node:20-slim AS frontend-builder
 
 WORKDIR /app
 
@@ -30,15 +30,6 @@ COPY apps/frontend/package*.json ./apps/frontend/
 # Skip Cypress binary download - not needed for frontend build (only for E2E tests)
 ENV CYPRESS_INSTALL_BINARY=0
 RUN npm ci
-
-# Install platform-specific rollup binary for Alpine (musl)
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      npm install --no-save @rollup/rollup-linux-x64-musl; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      npm install --no-save @rollup/rollup-linux-arm64-musl; \
-    elif [ "$TARGETARCH" = "arm" ]; then \
-      npm install --no-save @rollup/rollup-linux-arm-musleabihf; \
-    fi
 
 # Copy frontend source
 COPY apps/frontend/ ./apps/frontend/
