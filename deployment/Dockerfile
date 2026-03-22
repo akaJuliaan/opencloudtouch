@@ -4,40 +4,21 @@
 # Multi-stage build for OpenCloudTouch
 # Supports amd64, arm64, and armv7 (Raspberry Pi 2/3/4/5)
 # ============================================================
-
+#
+# IMPORTANT: The frontend is pre-built in CI (platform-independent HTML/CSS/JS)
+# and provided via the Docker build context at .out/dist/.
+# This avoids needing Node.js in Docker and eliminates Rolldown/Rollup
+# native binding issues across architectures (especially ARM32 musl).
+#
 # Base Image Versions (Pinned for Reproducibility)
 # Update SHA256 digests with:
 #   docker pull <image>:<tag>
 #   docker inspect --format='{{.RepoDigests}}' <image>:<tag>
 #
 # Current versions:
-#   Node.js: 20-slim (Debian Bookworm, glibc — required for Rolldown ARM bindings)
 #   Python: 3.11.8-slim (Debian Bookworm)
 
-# Stage 1: Build Frontend
-# Using Debian slim instead of Alpine because Vite 8 uses Rolldown which
-# has no musl binding for linux/arm/v7 (@rolldown/binding-linux-arm-musleabihf).
-# Debian (glibc) supports all target architectures via @rolldown/binding-linux-arm-gnueabihf.
-FROM node:20-slim AS frontend-builder
-
-WORKDIR /app
-
-# Copy workspace configuration first
-COPY package*.json ./
-COPY apps/frontend/package*.json ./apps/frontend/
-
-# Install dependencies using workspace
-# Skip Cypress binary download - not needed for frontend build (only for E2E tests)
-ENV CYPRESS_INSTALL_BINARY=0
-RUN npm ci
-
-# Copy frontend source
-COPY apps/frontend/ ./apps/frontend/
-
-# Build frontend
-RUN npm run build --workspace=apps/frontend
-
-# Stage 2: Python Dependencies (separate for better caching)
+# Stage 1: Python Dependencies (separate for better caching)
 FROM python:3.11-slim@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2eafbf AS python-deps
 
 # Install build dependencies (full toolchain needed for arm/v7 cross-compilation)
@@ -109,8 +90,8 @@ RUN python -m compileall -b opencloudtouch/ && \
     find opencloudtouch/ -name "*.py" ! -name "__main__.py" -delete && \
     find opencloudtouch/ -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
-# Copy frontend build from previous stage
-COPY --from=frontend-builder /app/.out/dist ./frontend/dist
+# Copy pre-built frontend from CI (platform-independent static files)
+COPY .out/dist ./frontend/dist
 
 # Copy entrypoint script
 COPY apps/backend/entrypoint.sh /entrypoint.sh
