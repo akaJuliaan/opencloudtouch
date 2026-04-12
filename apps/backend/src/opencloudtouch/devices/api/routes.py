@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 
 from opencloudtouch.core.config import AppConfig, get_config
 from opencloudtouch.core.dependencies import get_device_service
-from opencloudtouch.core.exceptions import DeviceNotFoundError
+from opencloudtouch.core.exceptions import DeviceConnectionError, DeviceNotFoundError
 from opencloudtouch.devices.service import DeviceService
 
 logger = logging.getLogger(__name__)
@@ -126,6 +126,8 @@ async def get_device_capabilities_endpoint(
     except ValueError as e:
         # ValueError from service means device not found
         raise DeviceNotFoundError(device_id) from e
+    except DeviceConnectionError:
+        raise
     except Exception as e:
         logger.error(f"Failed to get capabilities for device {device_id}: {e}")
         raise HTTPException(
@@ -170,6 +172,8 @@ async def press_key(
             raise DeviceNotFoundError(device_id) from e
         # Invalid key or state
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except DeviceConnectionError:
+        raise
     except Exception as e:
         logger.error(f"Failed to press key {key} on device {device_id}: {e}")
         raise HTTPException(
@@ -198,6 +202,8 @@ async def get_now_playing(
         if "not found" in str(e).lower():
             raise DeviceNotFoundError(device_id) from e
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except DeviceConnectionError:
+        raise
     except Exception as e:
         logger.error(f"Failed to get now playing for device {device_id}: {e}")
         raise HTTPException(
@@ -218,6 +224,8 @@ async def get_volume(
         if "not found" in str(e).lower():
             raise DeviceNotFoundError(device_id) from e
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except DeviceConnectionError:
+        raise
     except Exception as e:
         logger.error(f"Failed to get volume for device {device_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to get volume") from e
@@ -237,6 +245,8 @@ async def set_volume(
         if "not found" in str(e).lower():
             raise DeviceNotFoundError(device_id) from e
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except DeviceConnectionError:
+        raise
     except Exception as e:
         logger.error(f"Failed to set volume for device {device_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to set volume") from e
@@ -256,6 +266,8 @@ async def set_mute(
         if "not found" in str(e).lower():
             raise DeviceNotFoundError(device_id) from e
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except DeviceConnectionError:
+        raise
     except Exception as e:
         logger.error(f"Failed to set mute for device {device_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to set mute") from e

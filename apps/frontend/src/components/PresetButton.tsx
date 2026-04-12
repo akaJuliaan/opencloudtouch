@@ -16,6 +16,7 @@ interface PresetButtonProps {
   onPlay: () => void;
   onClear?: () => void;
   isCurrentlyPlaying?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -114,7 +115,21 @@ export default function PresetButton({
   onPlay,
   onClear,
   isCurrentlyPlaying,
+  disabled = false,
 }: PresetButtonProps) {
+  if (disabled) {
+    return (
+      <div className="preset-button preset-disabled" data-testid={`preset-${number}`}>
+        <div className="preset-info disabled-preset">
+          <span className="preset-number">{number}</span>
+          <span className="preset-name disabled-text">
+            {preset?.station_name || "Nicht verfügbar"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="preset-button" data-testid={`preset-${number}`}>
       {preset ? (

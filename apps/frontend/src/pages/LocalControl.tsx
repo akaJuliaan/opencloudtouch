@@ -5,10 +5,12 @@ import DeviceSwiper, { Device } from "../components/DeviceSwiper";
 import NowPlaying from "../components/NowPlaying";
 import VolumeSlider from "../components/VolumeSlider";
 import SetupBadge from "../components/SetupBadge";
+import DeviceOfflineBanner from "../components/DeviceOfflineBanner";
 import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useVolume } from "../hooks/useVolume";
 import { useZones } from "../hooks/useZones";
 import { togglePlayPause, nextTrack, prevTrack, power } from "../api/devices";
+import { isDeviceOffline as isDeviceOfflineInStore } from "../api/offlineDeviceStore";
 import "./LocalControl.css";
 
 type SourceId = "INTERNET_RADIO" | "BLUETOOTH" | "AUX" | "AIRPLAY";
@@ -40,7 +42,8 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
   const currentDevice = devices[currentDeviceIndex];
   const deviceId = currentDevice?.device_id;
 
-  const { nowPlaying } = useNowPlaying(deviceId);
+  const { nowPlaying, deviceOffline: hookOffline } = useNowPlaying(deviceId);
+  const deviceOffline = hookOffline || (deviceId ? isDeviceOfflineInStore(deviceId) : false);
   const { volume, muted, setDeviceVolume, toggleMute } = useVolume(deviceId);
   const { zones } = useZones();
 
@@ -66,7 +69,7 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
   }, [nowPlaying?.source]);
 
   const handleKey = async (key: string, fn: (id: string) => Promise<void>) => {
-    if (!deviceId || keyLoading) return;
+    if (!deviceId || keyLoading || deviceOffline) return;
     setKeyLoading(key);
     try {
       await fn(deviceId);
@@ -112,7 +115,7 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
               <button
                 className="power-header-btn on"
                 onClick={() => handleKey("POWER", power)}
-                disabled={keyLoading === "POWER"}
+                disabled={keyLoading === "POWER" || deviceOffline}
                 aria-label="Ein/Ausschalten"
                 title="Ein/Ausschalten"
               >
@@ -120,7 +123,19 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
               </button>
             </div>
             <div className="device-header-info">
-              <h2 className="device-name">{currentDevice?.name}</h2>
+              <h2 className="device-name">
+                {currentDevice?.name}
+                {deviceOffline && (
+                  <span
+                    className="device-offline-icon"
+                    title="Gerät offline"
+                    aria-label="Gerät offline"
+                  >
+                    {" "}
+                    📡✖
+                  </span>
+                )}
+              </h2>
               <span className="device-model">{currentDevice?.model || "Unknown Model"}</span>
             </div>
             <div className="device-header-right">
@@ -142,8 +157,19 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
             </div>
           </div>
 
+          {/* Device Offline Banner */}
+          {deviceOffline && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <DeviceOfflineBanner deviceName={currentDevice?.name} />
+            </motion.div>
+          )}
+
           {/* Now Playing */}
-          {nowPlaying && (
+          {nowPlaying && !deviceOffline && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -164,79 +190,85 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
           )}
 
           {/* Volume Control */}
-          <motion.div
-            className="volume-section"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <VolumeSlider
-              volume={volume}
-              muted={muted}
-              onVolumeChange={setDeviceVolume}
-              onMuteToggle={toggleMute}
-            />
-          </motion.div>
+          {!deviceOffline && (
+            <motion.div
+              className="volume-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <VolumeSlider
+                volume={volume}
+                muted={muted}
+                onVolumeChange={setDeviceVolume}
+                onMuteToggle={toggleMute}
+              />
+            </motion.div>
+          )}
 
           {/* Source Selection */}
-          <motion.div
-            className="source-section"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <h3 className="source-title">Quelle</h3>
-            <div className="source-tabs">
-              {supportedSources.map((source) => (
-                <button
-                  key={source.id}
-                  className={`source-tab ${selectedSource === source.id ? "active" : ""}`}
-                  onClick={() => handleSourceChange(source.id)}
-                >
-                  <span className="source-icon">{source.icon}</span>
-                  <span className="source-label">{source.label}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
+          {!deviceOffline && (
+            <motion.div
+              className="source-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <h3 className="source-title">Quelle</h3>
+              <div className="source-tabs">
+                {supportedSources.map((source) => (
+                  <button
+                    key={source.id}
+                    className={`source-tab ${selectedSource === source.id ? "active" : ""}`}
+                    onClick={() => handleSourceChange(source.id)}
+                  >
+                    <span className="source-icon">{source.icon}</span>
+                    <span className="source-label">{source.label}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {/* Playback Controls */}
-          <motion.div
-            className="playback-section"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <h3 className="playback-title">Wiedergabe</h3>
-            <div className="playback-controls">
-              <button
-                className="playback-button previous"
-                onClick={() => handleKey("PREV_TRACK", prevTrack)}
-                disabled={keyLoading === "PREV_TRACK"}
-                aria-label="Vorheriger Track"
-              >
-                <span className="playback-icon">{keyLoading === "PREV_TRACK" ? "⏳" : "⏮"}</span>
-              </button>
-              <button
-                className="playback-button play-pause primary"
-                onClick={() => handleKey("PLAY_PAUSE", togglePlayPause)}
-                disabled={keyLoading === "PLAY_PAUSE"}
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                <span className="playback-icon">
-                  {keyLoading === "PLAY_PAUSE" ? "⏳" : isPlaying ? "⏸️" : "▶️"}
-                </span>
-              </button>
-              <button
-                className="playback-button next"
-                onClick={() => handleKey("NEXT_TRACK", nextTrack)}
-                disabled={keyLoading === "NEXT_TRACK"}
-                aria-label="Nächster Track"
-              >
-                <span className="playback-icon">{keyLoading === "NEXT_TRACK" ? "⏳" : "⏭"}</span>
-              </button>
-            </div>
-          </motion.div>
+          {!deviceOffline && (
+            <motion.div
+              className="playback-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <h3 className="playback-title">Wiedergabe</h3>
+              <div className="playback-controls">
+                <button
+                  className="playback-button previous"
+                  onClick={() => handleKey("PREV_TRACK", prevTrack)}
+                  disabled={keyLoading === "PREV_TRACK"}
+                  aria-label="Vorheriger Track"
+                >
+                  <span className="playback-icon">{keyLoading === "PREV_TRACK" ? "⏳" : "⏮"}</span>
+                </button>
+                <button
+                  className="playback-button play-pause primary"
+                  onClick={() => handleKey("PLAY_PAUSE", togglePlayPause)}
+                  disabled={keyLoading === "PLAY_PAUSE"}
+                  aria-label={isPlaying ? "Pause" : "Play"}
+                >
+                  <span className="playback-icon">
+                    {keyLoading === "PLAY_PAUSE" ? "⏳" : isPlaying ? "⏸️" : "▶️"}
+                  </span>
+                </button>
+                <button
+                  className="playback-button next"
+                  onClick={() => handleKey("NEXT_TRACK", nextTrack)}
+                  disabled={keyLoading === "NEXT_TRACK"}
+                  aria-label="Nächster Track"
+                >
+                  <span className="playback-icon">{keyLoading === "NEXT_TRACK" ? "⏳" : "⏭"}</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           {/* Quick Actions */}
           <motion.div
@@ -245,7 +277,11 @@ export default function LocalControl({ devices = [] }: LocalControlProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <button className={`quick-action-button ${muted ? "active" : ""}`} onClick={toggleMute}>
+            <button
+              className={`quick-action-button ${muted ? "active" : ""}`}
+              onClick={toggleMute}
+              disabled={deviceOffline}
+            >
               <span className="quick-action-icon">{muted ? "🔇" : "🔊"}</span>
               <span className="quick-action-label">{muted ? "Ton an" : "Stumm"}</span>
             </button>

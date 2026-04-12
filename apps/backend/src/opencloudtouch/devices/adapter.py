@@ -91,7 +91,7 @@ def get_discovery_adapter(timeout: int = 10) -> DeviceDiscovery:
         return adapter
 
 
-def get_device_client(base_url: str, timeout: float = 5.0) -> DeviceClient:
+def get_device_client(base_url: str, timeout: float = 3.0) -> DeviceClient:
     """
     Factory function to get device client based on OCT_MOCK_MODE.
 

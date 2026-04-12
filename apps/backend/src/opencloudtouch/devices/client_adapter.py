@@ -5,6 +5,7 @@ Extracted from devices/adapter.py (STORY-305).
 Wraps bosesoundtouchapi BoseClient with our internal DeviceClient interface.
 """
 
+import asyncio
 import logging
 from urllib.parse import urlparse
 
@@ -26,13 +27,14 @@ logger = logging.getLogger(__name__)
 class BoseDeviceClientAdapter(DeviceClient):
     """Adapter wrapping bosesoundtouchapi library client."""
 
-    def __init__(self, base_url: str, timeout: float = 5.0):
+    def __init__(self, base_url: str, timeout: float = 3.0):
         """
         Initialize client adapter.
 
         Args:
             base_url: Base URL of device (e.g., http://192.168.1.100:8090)
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (reduced to 3s to fail fast
+                     for offline devices and avoid blocking the thread pool)
         """
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
@@ -45,9 +47,16 @@ class BoseDeviceClientAdapter(DeviceClient):
 
         # Create SoundTouchDevice with connectTimeout parameter
         # This initializes the device and loads info/capabilities
-        device = SoundTouchDevice(host=self.ip, connectTimeout=int(timeout), port=port)
-
-        self._client = BoseClient(device)
+        # NOTE: This constructor makes synchronous HTTP calls (blocking I/O).
+        # Callers MUST use asyncio.to_thread() to avoid blocking the event loop.
+        try:
+            device = SoundTouchDevice(
+                host=self.ip, connectTimeout=int(timeout), port=port
+            )
+            self._client = BoseClient(device)
+        except Exception as e:
+            logger.error(f"Failed to connect to device at {base_url}: {e}")
+            raise DeviceConnectionError(self.ip, str(e)) from e
 
     def _extract_firmware_version(self, info) -> str:
         """Extract firmware version from Components list."""
@@ -79,7 +88,7 @@ class BoseDeviceClientAdapter(DeviceClient):
         try:
             # BoseClient.GetInformation() returns InfoElement
             # Properties: DeviceName, DeviceId, DeviceType, ModuleType, etc.
-            info = self._client.GetInformation()
+            info = await asyncio.to_thread(self._client.GetInformation)
 
             firmware_version = self._extract_firmware_version(info)
             ip_address = self._extract_ip_address(info)
@@ -124,7 +133,7 @@ class BoseDeviceClientAdapter(DeviceClient):
         try:
             # BoseClient.GetNowPlayingStatus() returns NowPlayingStatus
             # Properties: Source, PlayStatus, StationName, Artist, Track, Album, ArtUrl
-            now_playing = self._client.GetNowPlayingStatus()
+            now_playing = await asyncio.to_thread(self._client.GetNowPlayingStatus)
 
             # Map PlayStatus to our state format
             # BoseClient uses: PLAY_STATE, PAUSE_STATE, STOP_STATE, BUFFERING_STATE
@@ -187,7 +196,7 @@ class BoseDeviceClientAdapter(DeviceClient):
                 extra={"device_ip": self.ip, "key": key, "state": state},
             )
 
-            self._client.Action(key_enum, state_enum)
+            await asyncio.to_thread(self._client.Action, key_enum, state_enum)
 
         except Exception as e:
             logger.error(
@@ -318,7 +327,7 @@ class BoseDeviceClientAdapter(DeviceClient):
     async def get_volume(self) -> VolumeInfo:
         """Get current volume state from device."""
         try:
-            vol = self._client.GetVolume()
+            vol = await asyncio.to_thread(self._client.GetVolume)
             return VolumeInfo(
                 actual=vol.Actual,
                 target=vol.Target,
@@ -333,7 +342,7 @@ class BoseDeviceClientAdapter(DeviceClient):
     async def set_volume(self, level: int) -> None:
         """Set volume level (0-100)."""
         try:
-            self._client.SetVolumeLevel(level)
+            await asyncio.to_thread(self._client.SetVolumeLevel, level)
         except Exception as e:
             logger.error(f"Failed to set volume on {self.base_url}: {e}", exc_info=True)
             raise DeviceConnectionError(self.ip, str(e)) from e
@@ -342,9 +351,9 @@ class BoseDeviceClientAdapter(DeviceClient):
         """Set mute state."""
         try:
             if muted:
-                self._client.MuteOn(refresh=False)
+                await asyncio.to_thread(self._client.MuteOn, refresh=False)
             else:
-                self._client.MuteOff(refresh=False)
+                await asyncio.to_thread(self._client.MuteOff, refresh=False)
         except Exception as e:
             logger.error(f"Failed to set mute on {self.base_url}: {e}", exc_info=True)
             raise DeviceConnectionError(self.ip, str(e)) from e
@@ -391,7 +400,7 @@ class BoseDeviceClientAdapter(DeviceClient):
     async def get_zone_status(self) -> ZoneStatus | None:
         """Get current zone status from device."""
         try:
-            zone = self._client.GetZoneStatus(refresh=True)
+            zone = await asyncio.to_thread(self._client.GetZoneStatus, refresh=True)
             return self._zone_to_status(zone)
         except Exception as e:
             logger.error(
@@ -427,9 +436,9 @@ class BoseDeviceClientAdapter(DeviceClient):
                 extra={"master_ip": master_ip, "member_count": len(members)},
             )
 
-            self._client.CreateZone(zone, delay=3)
+            await asyncio.to_thread(self._client.CreateZone, zone, delay=3)
 
-            result = self._client.GetZoneStatus(refresh=True)
+            result = await asyncio.to_thread(self._client.GetZoneStatus, refresh=True)
             return self._zone_to_status(result) or ZoneStatus(
                 master_id=master_device_id,
                 master_ip=master_ip,
@@ -456,7 +465,7 @@ class BoseDeviceClientAdapter(DeviceClient):
                 ZoneMember(ipAddress=m.ip_address, deviceId=m.device_id)
                 for m in members
             ]
-            self._client.AddZoneMembers(zone_members, delay=3)
+            await asyncio.to_thread(self._client.AddZoneMembers, zone_members, delay=3)
         except Exception as e:
             logger.error(
                 f"Failed to add zone members on {self.base_url}: {e}", exc_info=True
@@ -472,7 +481,9 @@ class BoseDeviceClientAdapter(DeviceClient):
                 ZoneMember(ipAddress=m.ip_address, deviceId=m.device_id)
                 for m in members
             ]
-            self._client.RemoveZoneMembers(zone_members, delay=3)
+            await asyncio.to_thread(
+                self._client.RemoveZoneMembers, zone_members, delay=3
+            )
         except Exception as e:
             logger.error(
                 f"Failed to remove zone members on {self.base_url}: {e}", exc_info=True
@@ -482,7 +493,7 @@ class BoseDeviceClientAdapter(DeviceClient):
     async def remove_zone(self) -> None:
         """Dissolve entire zone."""
         try:
-            self._client.RemoveZone(delay=3)
+            await asyncio.to_thread(self._client.RemoveZone, delay=3)
             logger.info("Zone removed on %s", self.base_url)
         except Exception as e:
             logger.error(

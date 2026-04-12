@@ -2,7 +2,9 @@
 
 import uvicorn
 
+from opencloudtouch.core.config import get_config
 from opencloudtouch.main import app
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7777)  # nosec B104
+    cfg = get_config()
+    uvicorn.run(app, host=cfg.host, port=cfg.port)  # nosec B104

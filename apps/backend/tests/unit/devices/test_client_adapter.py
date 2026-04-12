@@ -37,9 +37,9 @@ class TestBoseDeviceClientAdapterInit:
         assert client.base_url == "http://192.168.1.55:8090"
 
     def test_init_default_timeout(self):
-        """Default timeout is 5.0 seconds."""
+        """Default timeout is 3.0 seconds."""
         client = _make_client()
-        assert client.timeout == 5.0
+        assert client.timeout == 3.0
 
     def test_init_custom_timeout(self):
         """Custom timeout is stored."""
@@ -48,6 +48,37 @@ class TestBoseDeviceClientAdapterInit:
         ):
             client = BoseDeviceClientAdapter("http://192.168.1.100:8090", timeout=10.0)
         assert client.timeout == 10.0
+
+    def test_init_raises_device_connection_error_when_device_unreachable(self):
+        """Regression test for #82: offline device must raise DeviceConnectionError."""
+        with patch(
+            "opencloudtouch.devices.client_adapter.SoundTouchDevice",
+            side_effect=Exception(
+                "HTTPConnectionPool(host='192.168.178.48', port=8090): "
+                "Max retries exceeded with url: /info"
+            ),
+        ):
+            with pytest.raises(DeviceConnectionError) as exc_info:
+                BoseDeviceClientAdapter("http://192.168.178.48:8090")
+            assert "192.168.178.48" in str(exc_info.value)
+
+    def test_init_raises_device_connection_error_on_no_route(self):
+        """Regression test for #82: No route to host raises DeviceConnectionError."""
+        with patch(
+            "opencloudtouch.devices.client_adapter.SoundTouchDevice",
+            side_effect=OSError("[Errno 113] No route to host"),
+        ):
+            with pytest.raises(DeviceConnectionError):
+                BoseDeviceClientAdapter("http://192.168.178.48:8090")
+
+    def test_init_raises_device_connection_error_on_timeout(self):
+        """Regression test for #82: connection timeout raises DeviceConnectionError."""
+        with patch(
+            "opencloudtouch.devices.client_adapter.SoundTouchDevice",
+            side_effect=TimeoutError("connection timed out"),
+        ):
+            with pytest.raises(DeviceConnectionError):
+                BoseDeviceClientAdapter("http://192.168.1.100:8090")
 
 
 class TestExtractFirmwareVersion:

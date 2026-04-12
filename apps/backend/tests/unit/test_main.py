@@ -48,6 +48,33 @@ async def test_lifespan_initialization():
         mock_repo.close.assert_called_once()
 
 
+def test_main_module_uses_config_port():
+    """Regression test for #70: __main__.py must use config port, not hardcoded 7777."""
+    import runpy
+    from pathlib import Path
+
+    mock_config = MagicMock()
+    mock_config.host = "0.0.0.0"
+    mock_config.port = 9999
+
+    with patch(
+        "opencloudtouch.core.config.get_config", return_value=mock_config
+    ), patch("uvicorn.run") as mock_run:
+        runpy.run_path(
+            str(
+                Path(__file__).resolve().parents[2]
+                / "src"
+                / "opencloudtouch"
+                / "__main__.py"
+            ),
+            run_name="__main__",
+        )
+        mock_run.assert_called_once()
+        _, kwargs = mock_run.call_args
+        assert kwargs["port"] == 9999
+        assert kwargs["host"] == "0.0.0.0"
+
+
 def test_health_endpoint():
     """Test health check endpoint returns expected fields and types."""
     from opencloudtouch.main import app
