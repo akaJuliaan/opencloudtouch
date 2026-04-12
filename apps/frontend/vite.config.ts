@@ -8,7 +8,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
             return 'react-vendor';
           }

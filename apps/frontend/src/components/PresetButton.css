@@ -114,3 +114,26 @@
 .preset-play-btn:disabled {
   cursor: default;
 }
+
+/* Disabled / Offline state */
+.preset-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.preset-disabled .disabled-preset {
+  cursor: default;
+  background-color: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--border-radius-md);
+}
+
+.disabled-text {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}

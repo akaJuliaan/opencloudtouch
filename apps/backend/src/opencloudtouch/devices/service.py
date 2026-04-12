@@ -237,7 +237,7 @@ class DeviceService:
         if not device:
             raise ValueError(f"Device {device_id} not found")
         base_url = f"http://{device.ip}:8090"
-        client = get_device_client(base_url)
+        client = await asyncio.to_thread(get_device_client, base_url)
         try:
             yield client
         finally:

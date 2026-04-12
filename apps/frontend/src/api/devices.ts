@@ -83,7 +83,7 @@ export async function getDevices(): Promise<Device[]> {
 /**
  * Custom error class with HTTP status code
  */
-class APIError extends Error {
+export class APIError extends Error {
   statusCode?: number;
 
   constructor(message: string, statusCode?: number) {
@@ -91,6 +91,11 @@ class APIError extends Error {
     this.name = "APIError";
     this.statusCode = statusCode;
   }
+}
+
+/** Check if an error indicates the device is offline (503 Service Unavailable or 500 from device endpoint) */
+export function isDeviceOfflineError(error: unknown): boolean {
+  return error instanceof APIError && (error.statusCode === 503 || error.statusCode === 500);
 }
 
 /**
@@ -163,7 +168,7 @@ export interface VolumeState {
 export async function getVolume(deviceId: string): Promise<VolumeState> {
   const response = await fetch(`${API_BASE_URL}/api/devices/${deviceId}/volume`);
   if (!response.ok) {
-    throw new Error(`Failed to get volume: ${response.statusText}`);
+    throw new APIError(`Failed to get volume: ${response.statusText}`, response.status);
   }
   return response.json();
 }
@@ -207,7 +212,7 @@ export interface NowPlayingState {
 export async function getNowPlaying(deviceId: string): Promise<NowPlayingState> {
   const response = await fetch(`${API_BASE_URL}/api/devices/${deviceId}/now-playing`);
   if (!response.ok) {
-    throw new Error(`Failed to get now playing: ${response.statusText}`);
+    throw new APIError(`Failed to get now playing: ${response.statusText}`, response.status);
   }
   return response.json();
 }

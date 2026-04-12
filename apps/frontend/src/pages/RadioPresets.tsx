@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import DeviceSwiper, { Device } from "../components/DeviceSwiper";
 import NowPlaying from "../components/NowPlaying";
 import PresetButton from "../components/PresetButton";
 import SetupBadge from "../components/SetupBadge";
+import DeviceOfflineBanner from "../components/DeviceOfflineBanner";
 import RadioSearch, { RadioStation } from "../components/RadioSearch";
 import VolumeSlider from "../components/VolumeSlider";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { PresetSkeleton } from "../components/LoadingSkeleton";
 import { playPreset as playPresetAPI, togglePlayPause, power } from "../api/devices";
+import { isDeviceOffline } from "../api/offlineDeviceStore";
 import { usePresets } from "../hooks/usePresets";
 import { useVolume } from "../hooks/useVolume";
 import { useNowPlaying } from "../hooks/useNowPlaying";
@@ -26,6 +29,7 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
   const [assigningPreset, setAssigningPreset] = useState<number | null>(null);
 
   const currentDevice = devices[currentDeviceIndex];
+  const deviceOffline = currentDevice ? isDeviceOffline(currentDevice.device_id) : false;
 
   const { presets, loading, syncing, error, clearError, syncPresets, assignStation, removePreset } =
     usePresets(currentDevice?.device_id);
@@ -163,7 +167,7 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
             <button
               className={`power-header-btn ${isStandby ? "off" : "on"}`}
               onClick={async () => {
-                if (!currentDevice?.device_id || powerLoading) return;
+                if (!currentDevice?.device_id || powerLoading || deviceOffline) return;
                 setPowerLoading(true);
                 try {
                   await power(currentDevice.device_id);
@@ -173,7 +177,7 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
                   setPowerLoading(false);
                 }
               }}
-              disabled={powerLoading}
+              disabled={powerLoading || deviceOffline}
               aria-label="Ein/Ausschalten"
               title="Ein/Ausschalten"
             >
@@ -198,27 +202,42 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
             )}
           </div>
 
-          <NowPlaying
-            nowPlaying={nowPlaying}
-            onPlayPause={
-              currentDevice
-                ? async () => {
-                    if (isStandby) {
-                      await power(currentDevice.device_id);
-                    } else {
-                      await togglePlayPause(currentDevice.device_id);
-                    }
-                  }
-                : undefined
-            }
-          />
+          {/* Device Offline Banner */}
+          {deviceOffline && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <DeviceOfflineBanner deviceName={currentDevice?.name} />
+            </motion.div>
+          )}
 
-          <VolumeSlider
-            volume={volume}
-            onVolumeChange={setDeviceVolume}
-            muted={muted}
-            onMuteToggle={toggleMute}
-          />
+          {!deviceOffline && (
+            <NowPlaying
+              nowPlaying={nowPlaying}
+              onPlayPause={
+                currentDevice
+                  ? async () => {
+                      if (isStandby) {
+                        await power(currentDevice.device_id);
+                      } else {
+                        await togglePlayPause(currentDevice.device_id);
+                      }
+                    }
+                  : undefined
+              }
+            />
+          )}
+
+          {!deviceOffline && (
+            <VolumeSlider
+              volume={volume}
+              onVolumeChange={setDeviceVolume}
+              muted={muted}
+              onMuteToggle={toggleMute}
+            />
+          )}
         </div>
       </DeviceSwiper>
 
@@ -229,8 +248,8 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
           <button
             className="sync-button"
             onClick={handleSyncPresets}
-            disabled={syncing || loading}
-            title="Presets vom Gerät synchronisieren"
+            disabled={syncing || loading || deviceOffline}
+            title={deviceOffline ? "Gerät offline" : "Presets vom Gerät synchronisieren"}
           >
             <span className="sync-icon">{syncing ? "⏳" : "🔄"}</span>
             <span>{syncing ? "Sync..." : "Vom Gerät laden"}</span>
@@ -238,7 +257,7 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
         </div>
 
         {/* Error Message */}
-        {error && (
+        {error && !deviceOffline && (
           <div className="error-message" data-testid="error-message">
             <p>{error}</p>
             <button onClick={clearError} aria-label="Fehlermeldung schließen">
@@ -270,23 +289,37 @@ export default function RadioPresets({ devices = [] }: RadioPresetsProps) {
         )}
 
         <div className="presets-grid">
-          {loading
+          {loading && !deviceOffline
             ? // REFACT-112: Skeleton placeholders reduce CLS (layout shift)
               [1, 2, 3, 4, 5, 6].map((num) => <PresetSkeleton key={num} />)
-            : [1, 2, 3, 4, 5, 6].map((num) => (
-                <PresetButton
-                  key={num}
-                  number={num}
-                  preset={presets[num]}
-                  onAssign={() => handleAssignClick(num)}
-                  onPlay={() => handlePlayPreset(num)}
-                  onClear={() => setClearingPreset(num)}
-                  isCurrentlyPlaying={
-                    npState?.state === "PLAY_STATE" &&
-                    npState?.station_name === presets[num]?.station_name
-                  }
-                />
-              ))}
+            : deviceOffline
+              ? // Offline: show disabled placeholder presets
+                [1, 2, 3, 4, 5, 6].map((num) => (
+                  <PresetButton
+                    key={num}
+                    number={num}
+                    preset={{ station_name: "Nicht verfügbar" }}
+                    onAssign={() => {}}
+                    onPlay={() => {}}
+                    onClear={() => {}}
+                    isCurrentlyPlaying={false}
+                    disabled={true}
+                  />
+                ))
+              : [1, 2, 3, 4, 5, 6].map((num) => (
+                  <PresetButton
+                    key={num}
+                    number={num}
+                    preset={presets[num]}
+                    onAssign={() => handleAssignClick(num)}
+                    onPlay={() => handlePlayPreset(num)}
+                    onClear={() => setClearingPreset(num)}
+                    isCurrentlyPlaying={
+                      npState?.state === "PLAY_STATE" &&
+                      npState?.station_name === presets[num]?.station_name
+                    }
+                  />
+                ))}
         </div>
       </div>
 

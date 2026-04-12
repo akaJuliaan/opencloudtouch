@@ -15,6 +15,7 @@ import {
   syncPresetsFromDevice,
   type PresetResponse,
 } from "../api/presets";
+import { isDeviceOffline } from "../api/offlineDeviceStore";
 
 // --------------------------------------------------------------------------
 // Helpers
@@ -60,6 +61,13 @@ export function usePresets(deviceId: string | undefined): UsePresetsResult {
   // ------------------------------------------------------------------
   useEffect(() => {
     if (!deviceId) return;
+
+    // Don't load presets for offline devices — no backend requests
+    if (isDeviceOffline(deviceId)) {
+      setPresets({});
+      setLoading(false);
+      return;
+    }
 
     // REFACT-120: 500ms debounce — only sync after user settles on a device
     const SYNC_DEBOUNCE_MS = 500;

@@ -221,7 +221,7 @@ def test_connect_timeout_constructor_parameter_regression():
 
 
 def test_connect_timeout_default_value():
-    """Test that default timeout (5s) is properly passed to SoundTouchDevice."""
+    """Test that default timeout (3s) is properly passed to SoundTouchDevice."""
     with patch(
         "opencloudtouch.devices.client_adapter.SoundTouchDevice"
     ) as mock_device_class:
@@ -231,10 +231,10 @@ def test_connect_timeout_default_value():
         # Create client without specifying timeout (use default)
         BoseDeviceClientAdapter("http://192.168.1.100:8090")
 
-        # Verify default timeout (5.0) is passed
+        # Verify default timeout (3.0) is passed
         mock_device_class.assert_called_once_with(
             host="192.168.1.100",
-            connectTimeout=5,  # Default value, converted to int
+            connectTimeout=3,  # Default value, converted to int
             port=8090,
         )
 
