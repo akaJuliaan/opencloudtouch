@@ -86,8 +86,22 @@ export default function ManualIPModal({ isOpen, onClose }: ManualIPModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose} data-test="modal-overlay">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} data-test="modal-content">
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      role="presentation"
+      data-test="modal-overlay"
+    >
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="dialog"
+        data-test="modal-content"
+      >
         <div className="modal-header">
           <h2 data-test="modal-title">Manuelle IP-Konfiguration</h2>
           <button className="modal-close" onClick={onClose} aria-label="Schließen">

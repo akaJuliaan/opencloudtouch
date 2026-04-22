@@ -219,8 +219,20 @@ export default function RadioSearch({
   if (!isOpen) return null;
 
   return (
-    <div className="radio-search-overlay" onClick={onClose}>
-      <div className="radio-search-modal" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="radio-search-overlay"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose?.();
+      }}
+      role="presentation"
+    >
+      <div
+        className="radio-search-modal"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="dialog"
+      >
         {detailUuid ? (
           <StationDetail
             stationUuid={detailUuid}

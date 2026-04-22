@@ -72,6 +72,9 @@ export default function ConfirmDialog({
     <div
       className="confirm-dialog-overlay"
       onClick={onCancel}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onCancel();
+      }}
       role="presentation"
       data-testid="confirm-dialog-overlay"
     >
