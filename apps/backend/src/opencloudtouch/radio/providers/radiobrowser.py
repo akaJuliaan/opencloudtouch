@@ -171,6 +171,15 @@ class RadioBrowserAdapter(RadioProvider):
         """Unique identifier for this provider."""
         return "radiobrowser"
 
+    def _default_params(self, limit: int) -> Dict[str, Any]:
+        """Build default query params for RadioBrowser API requests."""
+        return {
+            "limit": limit,
+            "hidebroken": "true",
+            "order": "votes",
+            "reverse": "true",
+        }
+
     async def search_by_name(self, name: str, limit: int = 10) -> List[RadioStation]:
         """
         Search stations by name.
@@ -183,7 +192,7 @@ class RadioBrowserAdapter(RadioProvider):
             List of matching RadioStation objects
         """
         endpoint = f"/json/stations/byname/{name}"
-        params = {"limit": limit}
+        params = self._default_params(limit)
 
         try:
             data = await self._make_request(endpoint, params)
@@ -214,7 +223,7 @@ class RadioBrowserAdapter(RadioProvider):
             List of matching RadioStation objects
         """
         endpoint = f"/json/stations/bycountry/{country}"
-        params = {"limit": limit}
+        params = self._default_params(limit)
 
         try:
             data = await self._make_request(endpoint, params)
@@ -243,7 +252,7 @@ class RadioBrowserAdapter(RadioProvider):
             List of matching RadioStation objects
         """
         endpoint = f"/json/stations/bytag/{tag}"
-        params = {"limit": limit}
+        params = self._default_params(limit)
 
         try:
             data = await self._make_request(endpoint, params)
