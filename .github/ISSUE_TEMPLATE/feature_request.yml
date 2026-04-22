@@ -1,0 +1,82 @@
+name: "\U0001F680 Feature Request"
+description: "Suggest a new feature or improvement for OpenCloudTouch."
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to suggest an improvement!
+        Please fill out the sections below as completely as possible so we can understand your request clearly.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: |
+        What problem does this feature solve? What is the current limitation?
+        A clear description helps us understand *why* this is needed.
+      placeholder: |
+        Example: "When searching for radio stations by country, only 10 results are shown.
+        I cannot find stations that are less popular but still relevant to me."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Desired Behaviour
+      description: |
+        Describe the behaviour you would like to see. Be as specific as possible:
+        - **Where** in the UI should this appear? (e.g. Radio Search dialog, Preset page, Settings)
+        - **When** should it be triggered? (e.g. on search, on page load, on button click)
+        - **What** should happen exactly? (e.g. "show a 'Load more' button that fetches the next 10 results")
+      placeholder: |
+        Example: "In the Radio Search dialog, after the initial 10 results are shown,
+        a 'Load more' button should appear at the bottom. Clicking it should load
+        the next 10 stations and append them to the list. The button should disappear
+        when no more results are available."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: |
+        Have you considered other ways to solve this? If so, why do you prefer your suggestion?
+      placeholder: |
+        Example: "Infinite scroll could work too, but a button gives more control
+        and avoids accidental loading on slow connections."
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other information that helps us understand the request:
+        - Screenshots or mockups
+        - Links to similar features in other apps
+        - Your device setup (number of SoundTouch devices, network type)
+        - How often you would use this feature
+      placeholder: "Screenshots, links, or any other helpful details."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      description: "Which part of OpenCloudTouch does this relate to?"
+      options:
+        - Radio Search
+        - Presets
+        - Device Control
+        - Zones / Multi-Room
+        - Setup / Configuration
+        - UI / Design
+        - Other
+    validations:
+      required: true
