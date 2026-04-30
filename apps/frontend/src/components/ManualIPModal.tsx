@@ -92,14 +92,14 @@ export default function ManualIPModal({ isOpen, onClose }: ManualIPModalProps) {
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
-      role="presentation"
+      tabIndex={-1}
+      role="none"
       data-test="modal-overlay"
     >
-      <div
+      <dialog
         className="modal-content"
+        open
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-        role="dialog"
         data-test="modal-content"
       >
         <div className="modal-header">
@@ -205,7 +205,7 @@ export default function ManualIPModal({ isOpen, onClose }: ManualIPModalProps) {
             {setManualIPs.isPending ? "Speichere..." : "Speichern"}
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

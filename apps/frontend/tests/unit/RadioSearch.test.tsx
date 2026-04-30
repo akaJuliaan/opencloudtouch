@@ -372,21 +372,22 @@ describe("RadioSearch Component", () => {
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
-  it("overlay has role=presentation for a11y", () => {
+  it("overlay has role=none for a11y", () => {
     render(
       <RadioSearch isOpen={true} onStationSelect={mockOnStationSelect} onClose={mockOnClose} />,
     );
 
     const overlay = document.querySelector(".radio-search-overlay")!;
-    expect(overlay).toHaveAttribute("role", "presentation");
+    expect(overlay).toHaveAttribute("role", "none");
   });
 
-  it("modal has role=dialog for a11y", () => {
+  it("modal uses native dialog element", () => {
     render(
       <RadioSearch isOpen={true} onStationSelect={mockOnStationSelect} onClose={mockOnClose} />,
     );
 
-    const modal = document.querySelector(".radio-search-modal")!;
-    expect(modal).toHaveAttribute("role", "dialog");
+    const dialog = document.querySelector("dialog.radio-search-modal")!;
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("open");
   });
 });

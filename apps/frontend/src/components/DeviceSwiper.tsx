@@ -1,9 +1,9 @@
 import { useState, ReactNode } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { Device } from "../api/devices";
+import type { Device } from "../api/devices";
 import "./DeviceSwiper.css";
 
-export type { Device };
+export type { Device } from "../api/devices";
 
 interface DeviceSwiperProps {
   devices: Device[];

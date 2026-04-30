@@ -234,5 +234,40 @@ describe("VolumeSlider Component", () => {
 
       expect(mockOnVolumeChange).toHaveBeenCalledWith(100);
     });
+
+    it("should track pointerMove during active drag", () => {
+      const mockOnVolumeChange = vi.fn();
+      const { container } = render(
+        <VolumeSlider volume={50} onVolumeChange={mockOnVolumeChange} muted={false} onMuteToggle={vi.fn()} />,
+      );
+      const track = container.querySelector(".volume-track") as HTMLElement;
+      vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+        left: 0, right: 200, width: 200, top: 0, bottom: 20, height: 20, x: 0, y: 0, toJSON: vi.fn(),
+      });
+
+      fireEvent.pointerDown(track, { clientX: 50, pointerId: 1 });
+      fireEvent.pointerMove(track, { clientX: 150, pointerId: 1 });
+      fireEvent.pointerUp(track, { clientX: 150, pointerId: 1 });
+
+      // Final value from pointerUp at 150/200 = 75%
+      expect(mockOnVolumeChange).toHaveBeenCalledWith(75);
+    });
+
+    it("should clamp drag to 0 when dragging past left edge", () => {
+      const mockOnVolumeChange = vi.fn();
+      const { container } = render(
+        <VolumeSlider volume={50} onVolumeChange={mockOnVolumeChange} muted={false} onMuteToggle={vi.fn()} />,
+      );
+      const track = container.querySelector(".volume-track") as HTMLElement;
+      vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+        left: 100, right: 300, width: 200, top: 0, bottom: 20, height: 20, x: 100, y: 0, toJSON: vi.fn(),
+      });
+
+      // Drag past left edge
+      fireEvent.pointerDown(track, { clientX: 50, pointerId: 1 });
+      fireEvent.pointerUp(track, { clientX: 50, pointerId: 1 });
+
+      expect(mockOnVolumeChange).toHaveBeenCalledWith(0);
+    });
   });
 });

@@ -353,3 +353,23 @@ class TestSSHVerification:
         ):
             # Should not raise
             await health_check._ssh_verify_all()
+
+
+class TestHealthCheckRunLoop:
+    """Tests for the _run loop, especially CancelledError propagation."""
+
+    async def test_cancelled_error_propagates_from_run_loop(self, mock_repo):
+        """CancelledError in _run must re-raise (not be swallowed)."""
+        import asyncio
+
+        hc = DeviceHealthCheck(mock_repo)
+        mock_repo.get_all.return_value = []
+
+        # Start the health check and then cancel it
+        hc.start()
+        assert hc._task is not None
+
+        # Cancel and verify clean shutdown
+        hc._task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await hc._task

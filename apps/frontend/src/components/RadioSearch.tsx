@@ -188,14 +188,10 @@ export default function RadioSearch({
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose?.();
       }}
-      role="presentation"
+      tabIndex={-1}
+      role="none"
     >
-      <div
-        className="radio-search-modal"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-        role="dialog"
-      >
+      <dialog className="radio-search-modal" open onClick={(e) => e.stopPropagation()}>
         {detailUuid ? (
           <StationDetail
             stationUuid={detailUuid}
@@ -323,7 +319,7 @@ export default function RadioSearch({
             </div>
           </>
         )}
-      </div>
+      </dialog>
     </div>
   );
 }

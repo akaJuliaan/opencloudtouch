@@ -60,16 +60,17 @@ describe("ManualIPModal", () => {
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
-  it("overlay has role=presentation", () => {
+  it("overlay has role=none for a11y", () => {
     render(<ManualIPModal isOpen={true} onClose={mockOnClose} />);
     const overlay = document.querySelector(".modal-overlay")!;
-    expect(overlay).toHaveAttribute("role", "presentation");
+    expect(overlay).toHaveAttribute("role", "none");
   });
 
-  it("modal content has role=dialog", () => {
+  it("modal content uses native dialog element", () => {
     render(<ManualIPModal isOpen={true} onClose={mockOnClose} />);
-    const content = document.querySelector(".modal-content")!;
-    expect(content).toHaveAttribute("role", "dialog");
+    const dialog = document.querySelector("dialog.modal-content")!;
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("open");
   });
 
   it("pre-fills with existing IPs on open", () => {
