@@ -115,6 +115,7 @@ async def lifespan(app: FastAPI):
         discovery_timeout=cfg.discovery_timeout,
         manual_ips=cfg.manual_device_ips_list or [],
         discovery_enabled=cfg.discovery_enabled,
+        settings_repo=settings_repo,
     )
     device_service = DeviceService(
         repository=device_repo,
