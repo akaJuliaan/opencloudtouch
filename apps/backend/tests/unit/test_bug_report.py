@@ -7,8 +7,12 @@ from fastapi.testclient import TestClient
 
 from opencloudtouch.api.bug_report import (
     BugReportRequest,
+    _anonymize_ip,
     _build_issue_body,
     _collect_diagnostics,
+    _create_github_issue,
+    _update_issue_body,
+    _upload_screenshot,
 )
 
 # ---------------------------------------------------------------------------
@@ -364,3 +368,295 @@ class TestBugReportRoute:
             json=self._make_payload(description="short"),
         )
         assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# _anonymize_ip helper
+# ---------------------------------------------------------------------------
+
+
+class TestAnonymizeIp:
+    def test_ipv4_masks_middle_octets(self):
+        assert _anonymize_ip("192.168.178.88") == "192.x.x.88"
+
+    def test_non_ipv4_returns_as_is(self):
+        assert _anonymize_ip("localhost") == "localhost"
+        assert _anonymize_ip("::1") == "::1"
+        assert _anonymize_ip("not.an.ip") == "not.an.ip"
+
+
+# ---------------------------------------------------------------------------
+# _create_github_issue error path
+# ---------------------------------------------------------------------------
+
+
+class TestCreateGithubIssue:
+    @pytest.mark.asyncio
+    async def test_raises_http_502_on_github_error(self):
+        from fastapi import HTTPException
+
+        mock_response = MagicMock()
+        mock_response.status_code = 422
+        mock_response.text = "Unprocessable Entity"
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            with pytest.raises(HTTPException) as exc_info:
+                await _create_github_issue(
+                    token="ghp_test",
+                    repo="test/repo",
+                    title="Bug title",
+                    body="Bug body",
+                    labels=["bug"],
+                )
+        assert exc_info.value.status_code == 502
+
+    @pytest.mark.asyncio
+    async def test_returns_url_and_number_on_success(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {
+            "html_url": "https://github.com/test/repo/issues/7",
+            "number": 7,
+        }
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            url, number = await _create_github_issue(
+                token="ghp_test",
+                repo="test/repo",
+                title="Bug title",
+                body="Bug body",
+                labels=["bug"],
+            )
+        assert url == "https://github.com/test/repo/issues/7"
+        assert number == 7
+
+
+# ---------------------------------------------------------------------------
+# _upload_screenshot paths
+# ---------------------------------------------------------------------------
+
+
+class TestUploadScreenshot:
+    @pytest.mark.asyncio
+    async def test_returns_none_for_non_base64_url(self):
+        result = await _upload_screenshot(
+            token="ghp_test",
+            repo="test/repo",
+            issue_number=1,
+            data_url="data:image/jpeg,raw-data-no-base64",
+        )
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_none_on_upload_failure(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = "Server Error"
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.put = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await _upload_screenshot(
+                token="ghp_test",
+                repo="test/repo",
+                issue_number=1,
+                data_url="data:image/jpeg;base64,/9j/AAAA",
+            )
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_download_url_on_success(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {
+            "content": {
+                "download_url": "https://raw.githubusercontent.com/test/repo/main/.github/bug-screenshots/issue-1.jpg"
+            }
+        }
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.put = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await _upload_screenshot(
+                token="ghp_test",
+                repo="test/repo",
+                issue_number=1,
+                data_url="data:image/jpeg;base64,/9j/AAAA",
+            )
+        assert result is not None
+        assert "raw.githubusercontent.com" in result
+
+
+# ---------------------------------------------------------------------------
+# _update_issue_body
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateIssueBody:
+    @pytest.mark.asyncio
+    async def test_sends_patch_request(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            await _update_issue_body(
+                token="ghp_test",
+                repo="test/repo",
+                issue_number=42,
+                body="Updated issue body",
+            )
+
+        mock_client.patch.assert_called_once()
+        call_kwargs = mock_client.patch.call_args
+        assert "issues/42" in call_kwargs[0][0]
+        assert call_kwargs[1]["json"]["body"] == "Updated issue body"
+
+
+# ---------------------------------------------------------------------------
+# Route — screenshot upload branch
+# ---------------------------------------------------------------------------
+
+
+class TestBugReportRouteScreenshot:
+    def _make_payload(self, **overrides):
+        defaults = {
+            "description": "Something is broken in the application",
+            "steps_to_reproduce": "1. Open the app\n2. Click on presets",
+            "expected_behavior": "Presets should load correctly",
+            "installation_type": "docker",
+            "hardware": "raspberry-pi-4",
+        }
+        defaults.update(overrides)
+        return defaults
+
+    @patch("opencloudtouch.api.bug_report._update_issue_body")
+    @patch("opencloudtouch.api.bug_report._upload_screenshot")
+    @patch("opencloudtouch.api.bug_report._create_github_issue")
+    @patch("opencloudtouch.api.bug_report._collect_diagnostics")
+    @patch("opencloudtouch.api.bug_report.get_config")
+    def test_screenshot_uploaded_and_issue_updated(
+        self, mock_cfg, mock_diag, mock_create, mock_upload, mock_update
+    ):
+        from opencloudtouch.main import app
+
+        cfg = MagicMock()
+        cfg.github_token = "ghp_test123"
+        cfg.github_repo = "test/repo"
+        mock_cfg.return_value = cfg
+
+        mock_diag.return_value = {
+            "backend_version": "0.2.0",
+            "backend_logs": [],
+            "config": {},
+            "devices": [],
+            "db_stats": {},
+            "timestamp": "",
+        }
+        mock_create.return_value = ("https://github.com/test/repo/issues/42", 42)
+        mock_upload.return_value = "https://raw.githubusercontent.com/test/repo/main/.github/bug-screenshots/issue-42.jpg"
+        mock_update.return_value = None
+
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/api/bug-report",
+            json=self._make_payload(
+                screenshot_data_url="data:image/jpeg;base64,/9j/AAAA"
+            ),
+        )
+
+        assert response.status_code == 200
+        mock_upload.assert_called_once()
+        mock_update.assert_called_once()
+
+    @patch("opencloudtouch.api.bug_report._upload_screenshot")
+    @patch("opencloudtouch.api.bug_report._create_github_issue")
+    @patch("opencloudtouch.api.bug_report._collect_diagnostics")
+    @patch("opencloudtouch.api.bug_report.get_config")
+    def test_screenshot_upload_failure_does_not_break_route(
+        self, mock_cfg, mock_diag, mock_create, mock_upload
+    ):
+        from opencloudtouch.main import app
+
+        cfg = MagicMock()
+        cfg.github_token = "ghp_test123"
+        cfg.github_repo = "test/repo"
+        mock_cfg.return_value = cfg
+
+        mock_diag.return_value = {
+            "backend_version": "0.2.0",
+            "backend_logs": [],
+            "config": {},
+            "devices": [],
+            "db_stats": {},
+            "timestamp": "",
+        }
+        mock_create.return_value = ("https://github.com/test/repo/issues/99", 99)
+        mock_upload.return_value = None  # upload returned None → skip update
+
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/api/bug-report",
+            json=self._make_payload(
+                screenshot_data_url="data:image/jpeg;base64,/9j/AAAA"
+            ),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["issue_url"] == "https://github.com/test/repo/issues/99"
+
+    @patch("opencloudtouch.api.bug_report._upload_screenshot")
+    @patch("opencloudtouch.api.bug_report._create_github_issue")
+    @patch("opencloudtouch.api.bug_report._collect_diagnostics")
+    @patch("opencloudtouch.api.bug_report.get_config")
+    def test_screenshot_exception_is_caught(
+        self, mock_cfg, mock_diag, mock_create, mock_upload
+    ):
+        from opencloudtouch.main import app
+
+        cfg = MagicMock()
+        cfg.github_token = "ghp_test123"
+        cfg.github_repo = "test/repo"
+        mock_cfg.return_value = cfg
+
+        mock_diag.return_value = {
+            "backend_version": "0.2.0",
+            "backend_logs": [],
+            "config": {},
+            "devices": [],
+            "db_stats": {},
+            "timestamp": "",
+        }
+        mock_create.return_value = ("https://github.com/test/repo/issues/77", 77)
+        mock_upload.side_effect = RuntimeError("Network error")
+
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/api/bug-report",
+            json=self._make_payload(
+                screenshot_data_url="data:image/jpeg;base64,/9j/AAAA"
+            ),
+        )
+
+        # Should still return 200 — exception is caught inside the route
+        assert response.status_code == 200
