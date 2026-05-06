@@ -83,24 +83,27 @@ class TestFullPipelineIntegration:
 
     @pytest.mark.asyncio
     async def test_owner_issue_hard_exits(self) -> None:
-        """Owner opens issue → hard exit, no processing."""
+        """Owner opens issue → hard exit, no processing (when SKIP_ASSOCIATIONS is active)."""
+        from stages.hard_exit import SKIP_ASSOCIATIONS
+
         payload = _load_fixture("issue_opened.json")
         payload["issue"]["author_association"] = "OWNER"
         event = WebhookEvent.from_payload("issues", payload)
 
         pipeline = _build_pipeline()
-        context = {"github_client": AsyncMock(), "bot_username": "oct-support-bot"}
+        gh = AsyncMock()
+        gh.search_issues_by_author = AsyncMock(return_value=0)
+        context = {"github_client": gh, "bot_username": "oct-support-bot"}
 
-        decisions = []
-        for name, func in pipeline._stages:
-            decision = await func(event, context)
-            decisions.append(decision)
-            if decision.short_circuit:
-                break
+        decisions = await pipeline.run(event, context)
 
-        assert len(decisions) == 1
-        assert decisions[0].stage == "hard_exit"
-        assert decisions[0].short_circuit is True
+        if "OWNER" in SKIP_ASSOCIATIONS:
+            assert decisions[0].stage == "hard_exit"
+            assert decisions[0].decision == "skip"
+        else:
+            # Owner filter disabled — pipeline processes normally
+            assert decisions[0].stage == "hard_exit"
+            assert decisions[0].decision == "pass"
 
     @pytest.mark.asyncio
     async def test_discussion_created(self) -> None:

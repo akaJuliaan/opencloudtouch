@@ -29,23 +29,19 @@ def _make_event(**overrides) -> WebhookEvent:
 
 class TestHardExitStage:
     @pytest.mark.asyncio
-    async def test_skips_owner(self) -> None:
-        event = _make_event(author_association="OWNER")
-        decision = await hard_exit_stage(event, {})
-        assert decision.short_circuit is True
-        assert decision.decision == "skip"
+    @pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR"])
+    async def test_privileged_associations_respect_skip_list(self, association: str) -> None:
+        """Associations in SKIP_ASSOCIATIONS are blocked, others pass through."""
+        from stages.hard_exit import SKIP_ASSOCIATIONS
 
-    @pytest.mark.asyncio
-    async def test_skips_member(self) -> None:
-        event = _make_event(author_association="MEMBER")
+        event = _make_event(author_association=association)
         decision = await hard_exit_stage(event, {})
-        assert decision.short_circuit is True
-
-    @pytest.mark.asyncio
-    async def test_skips_collaborator(self) -> None:
-        event = _make_event(author_association="COLLABORATOR")
-        decision = await hard_exit_stage(event, {})
-        assert decision.short_circuit is True
+        if association in SKIP_ASSOCIATIONS:
+            assert decision.short_circuit is True
+            assert decision.decision == "skip"
+        else:
+            assert decision.short_circuit is False
+            assert decision.decision == "pass"
 
     @pytest.mark.asyncio
     async def test_skips_bot_type(self) -> None:

@@ -150,3 +150,85 @@ class TestEditEventHandling:
         assert len(decisions) == 1
         assert decisions[0].stage == "edit_guard"
         assert decisions[0].short_circuit is True
+
+
+class TestActionStageAfterShortCircuit:
+    """Regression: action stage must run even after earlier stage short-circuits."""
+
+    @pytest.mark.asyncio
+    async def test_action_runs_after_rule_engine_short_circuit(self) -> None:
+        """When rule_engine short-circuits, action stage must still execute."""
+        execution_order: list[str] = []
+
+        async def rule_engine(event, context):
+            execution_order.append("rule_engine")
+            context["rule_match"] = {"answer": "test", "labels": ["support"], "close": True}
+            return PipelineDecision(stage="rule_engine", decision="match", reason="matched", short_circuit=True)
+
+        async def classifier(event, context):
+            execution_order.append("classifier")
+            return PipelineDecision(stage="classifier", decision="pass", reason="ok", short_circuit=False)
+
+        async def action(event, context):
+            execution_order.append("action")
+            return PipelineDecision(stage="action", decision="act", reason="acted", short_circuit=True)
+
+        pipeline = Pipeline()
+        pipeline.add_stage("rule_engine", rule_engine)
+        pipeline.add_stage("classifier", classifier)
+        pipeline.add_stage("action", action)
+
+        event = _make_event()
+        decisions = await pipeline.run(event)
+
+        # classifier must be skipped (short-circuit), but action must run
+        assert "rule_engine" in execution_order
+        assert "classifier" not in execution_order
+        assert "action" in execution_order
+        assert any(d.stage == "action" for d in decisions)
+
+    @pytest.mark.asyncio
+    async def test_action_skipped_when_hard_exit_skips(self) -> None:
+        """When hard_exit decides skip, action must NOT run."""
+        execution_order: list[str] = []
+
+        async def hard_exit(event, context):
+            execution_order.append("hard_exit")
+            return PipelineDecision(stage="hard_exit", decision="skip", reason="owner", short_circuit=True)
+
+        async def action(event, context):
+            execution_order.append("action")
+            return PipelineDecision(stage="action", decision="act", reason="acted", short_circuit=True)
+
+        pipeline = Pipeline()
+        pipeline.add_stage("hard_exit", hard_exit)
+        pipeline.add_stage("action", action)
+
+        event = _make_event()
+        decisions = await pipeline.run(event)
+
+        assert "hard_exit" in execution_order
+        assert "action" not in execution_order
+
+    @pytest.mark.asyncio
+    async def test_action_runs_after_normal_pipeline_flow(self) -> None:
+        """When no short-circuit happens, action stage runs normally at the end."""
+        execution_order: list[str] = []
+
+        async def stage_a(event, context):
+            execution_order.append("stage_a")
+            return PipelineDecision(stage="stage_a", decision="pass", reason="ok", short_circuit=False)
+
+        async def action(event, context):
+            execution_order.append("action")
+            return PipelineDecision(stage="action", decision="act", reason="acted", short_circuit=True)
+
+        pipeline = Pipeline()
+        pipeline.add_stage("stage_a", stage_a)
+        pipeline.add_stage("action", action)
+
+        event = _make_event()
+        decisions = await pipeline.run(event)
+
+        assert execution_order == ["stage_a", "action"]
+        assert any(d.stage == "action" for d in decisions)

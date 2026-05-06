@@ -57,7 +57,15 @@ class Pipeline:
             print(json.dumps(log_entry), flush=True)
             return decisions
 
-        for name, func in self._stages:
+        action_stage_entry: tuple[str, StageFunc] | None = None
+        processing_stages: list[tuple[str, StageFunc]] = []
+        for entry in self._stages:
+            if entry[0] == "action":
+                action_stage_entry = entry
+            else:
+                processing_stages.append(entry)
+
+        for name, func in processing_stages:
             decision = await func(event, context)
             decisions.append(decision)
 
@@ -72,5 +80,20 @@ class Pipeline:
 
             if decision.short_circuit:
                 break
+
+        # Always run action stage last (even after short-circuit)
+        if action_stage_entry is not None:
+            last = decisions[-1] if decisions else None
+            # Skip action if hard_exit decided to skip
+            if last is None or last.decision != "skip":
+                decision = await action_stage_entry[1](event, context)
+                decisions.append(decision)
+                log_entry = {
+                    "stage": decision.stage,
+                    "decision": decision.decision,
+                    "reason": decision.reason,
+                    "short_circuit": decision.short_circuit,
+                }
+                print(json.dumps(log_entry), flush=True)
 
         return decisions
