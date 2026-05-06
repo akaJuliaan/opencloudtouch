@@ -69,3 +69,24 @@ class TestMainEntryPoint:
                 exit_code = await run()
                 assert exit_code == 0
                 mock_gh.add_labels.assert_not_called()
+
+
+class TestKnowledgeBasePath:
+    """Regression: kb_dir must point to approved_answers subdir, not knowledge_base root."""
+
+    def test_kb_dir_resolves_to_approved_answers(self) -> None:
+        """Verify main.py builds kb_dir pointing to knowledge_base/approved_answers/."""
+        main_py = Path(__file__).parent.parent / "main.py"
+        source = main_py.read_text(encoding="utf-8")
+        # The kb_dir assignment must include approved_answers
+        assert '"knowledge_base" / "approved_answers"' in source or \
+               "'knowledge_base' / 'approved_answers'" in source or \
+               "knowledge_base/approved_answers" in source, \
+            "kb_dir in main.py must point to knowledge_base/approved_answers, not knowledge_base root"
+
+    def test_approved_answers_dir_exists(self) -> None:
+        """Verify the approved_answers directory exists with answer files."""
+        answers_dir = Path(__file__).parent.parent / "knowledge_base" / "approved_answers"
+        assert answers_dir.exists(), f"approved_answers directory missing: {answers_dir}"
+        md_files = list(answers_dir.glob("*.md"))
+        assert len(md_files) > 0, "approved_answers directory must contain at least one .md file"
