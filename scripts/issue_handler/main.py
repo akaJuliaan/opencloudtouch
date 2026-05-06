@@ -97,7 +97,7 @@ async def run() -> int:
                 rules = config.get("rules", [])
 
             # Load knowledge base
-            kb_dir = str(Path(__file__).parent / "knowledge_base")
+            kb_dir = str(Path(__file__).parent / "knowledge_base" / "approved_answers")
             kb = KnowledgeBase(kb_dir)
             kb_answers = kb.select_relevant_answers(event.title, event.body)
 
