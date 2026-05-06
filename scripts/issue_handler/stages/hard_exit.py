@@ -10,8 +10,8 @@ from typing import Any
 
 from models import PipelineDecision, WebhookEvent
 
-SKIP_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
-
+"""SKIP_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}"""
+SKIP_ASSOCIATIONS = {}
 
 async def hard_exit_stage(event: WebhookEvent, context: dict[str, Any]) -> PipelineDecision:
     """Check if event should be skipped based on sender identity."""
