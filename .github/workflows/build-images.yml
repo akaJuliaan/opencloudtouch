@@ -425,7 +425,11 @@ jobs:
         run: |
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-            /usr/local/share/boost /usr/share/swift || true
+            /usr/local/share/boost /usr/share/swift \
+            /usr/local/graalvm /usr/local/.ghcup \
+            /usr/local/share/powershell /usr/local/share/chromium \
+            /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune -af 2>/dev/null || true
           sudo apt-get clean
           df -h /
 
@@ -506,6 +510,28 @@ jobs:
 
           RUN_SCRIPT="pi-gen/stage2/01-sys-tweaks/01-run.sh"
           sed -i 's/systemctl enable rpi-resize/systemctl enable rpi-resize 2>\/dev\/null || true/' "$RUN_SCRIPT"
+
+      - name: Free chroot disk space before dist-upgrade
+        run: |
+          # pi-gen runs apt dist-upgrade inside the chroot (stage2/00-copies-and-fills).
+          # On arm64, the apt cache fills the container filesystem before upgrade completes.
+          # Inject apt-get clean before dist-upgrade to free cached .deb files.
+          COPIES_SCRIPT="pi-gen/stage2/00-copies-and-fills/00-run.sh"
+          if [ -f "$COPIES_SCRIPT" ]; then
+            sed -i '/dist-upgrade/i on_chroot << EOF\napt-get clean\nEOF' "$COPIES_SCRIPT"
+            echo "Injected apt-get clean before dist-upgrade in $COPIES_SCRIPT"
+          fi
+
+          # Also add periodic apt-get clean after each stage's package installs
+          for stage_dir in pi-gen/stage0 pi-gen/stage1 pi-gen/stage2; do
+            for run_script in "$stage_dir"/*/00-run.sh; do
+              if [ -f "$run_script" ] && grep -q "apt-get install" "$run_script"; then
+                # Append apt-get clean after each on_chroot block that installs packages
+                sed -i '/apt-get install/a apt-get clean' "$run_script"
+                echo "Added apt-get clean after installs in $run_script"
+              fi
+            done
+          done
 
       - name: Fix debootstrap GPG verification
         run: |
