@@ -140,6 +140,12 @@ class DeviceRepository(BaseRepository):
             sql="ALTER TABLE devices ADD COLUMN marge_account_uuid TEXT",
         )
 
+        await self._apply_migration(
+            version=103,
+            description="Add marge_account_uuid column to devices",
+            sql="ALTER TABLE devices ADD COLUMN marge_account_uuid TEXT",
+        )
+
         # Indexes
         await self._conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_devices_device_id ON devices(device_id)
@@ -194,7 +200,7 @@ class DeviceRepository(BaseRepository):
         device.id = row[0] if row else None
 
         await db.commit()
-        logger.debug(f"Upserted device: {device.name} ({device.device_id})")
+        logger.debug("Upserted device: %s (%s)", device.name, device.device_id)
 
         return device
 
@@ -265,7 +271,42 @@ class DeviceRepository(BaseRepository):
             params,
         )
         await db.commit()
-        logger.info(f"Updated setup status for {device_id}: {setup_status}")
+        logger.info("Updated setup status for %s: %s", device_id, setup_status)
+
+    async def get_by_account_uuid(self, account_uuid: str) -> Optional[Device]:
+        """Get device by marge_account_uuid."""
+        db = self._ensure_initialized()
+
+        cursor = await db.execute(
+            """
+            SELECT id, device_id, ip, name, model, mac_address, firmware_version,
+                   schema_version, last_seen, setup_status, ssh_permanent,
+                   setup_completed_at, marge_account_uuid
+            FROM devices
+            WHERE marge_account_uuid = ?
+        """,
+            (account_uuid,),
+        )
+
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return self._row_to_device(row)
+
+    async def update_marge_account_uuid(
+        self, device_id: str, marge_account_uuid: str
+    ) -> None:
+        """Update marge_account_uuid for a device."""
+        db = self._ensure_initialized()
+
+        await db.execute(
+            "UPDATE devices SET marge_account_uuid = ?, updated_at = CURRENT_TIMESTAMP WHERE device_id = ?",
+            (marge_account_uuid, device_id),
+        )
+        await db.commit()
+        logger.info(
+            "Updated marge_account_uuid for %s: %s", device_id, marge_account_uuid
+        )
 
     async def get_by_marge_account_uuid(
         self, marge_account_uuid: str
@@ -307,7 +348,7 @@ class DeviceRepository(BaseRepository):
         await db.commit()
 
         deleted_count = cursor.rowcount
-        logger.debug(f"Deleted all devices from database: {deleted_count} rows")
+        logger.debug("Deleted all devices from database: %d rows", deleted_count)
 
         return deleted_count
 

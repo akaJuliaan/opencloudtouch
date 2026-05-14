@@ -163,16 +163,18 @@ class DeviceSyncService:
                 unique_devices.append(device)
             else:
                 logger.debug(
-                    f"Deduplicating device at {device.ip} (already found via another source)"
+                    "Deduplicating device at %s (already found via another source)",
+                    device.ip,
                 )
 
         if len(unique_devices) < len(devices):
             logger.info(
-                f"Deduplicated {len(devices) - len(unique_devices)} device(s) "
-                f"({len(unique_devices)} unique after deduplication)"
+                "Deduplicated %d device(s) (%d unique after deduplication)",
+                len(devices) - len(unique_devices),
+                len(unique_devices),
             )
 
-        logger.info(f"Discovered {len(unique_devices)} unique devices total")
+        logger.info("Discovered %d unique devices total", len(unique_devices))
         return unique_devices
 
     async def _discover_via_ssdp(self) -> List[DiscoveredDevice]:
@@ -185,14 +187,14 @@ class DeviceSyncService:
         try:
             discovery = get_discovery_adapter(timeout=self.discovery_timeout)
             discovered = await discovery.discover(timeout=self.discovery_timeout)
-            logger.info(f"SSDP discovered {len(discovered)} devices")
+            logger.info("SSDP discovered %d devices", len(discovered))
             for d in discovered:
                 logger.debug(
                     "SSDP device: ip=%s, name=%s", d.ip, getattr(d, "name", "?")
                 )
             return discovered
-        except Exception as e:
-            logger.error(f"SSDP discovery failed: {e}")
+        except Exception:
+            logger.exception("SSDP discovery failed")
             return []
 
     async def _discover_via_manual_ips(self) -> List[DiscoveredDevice]:
@@ -209,20 +211,20 @@ class DeviceSyncService:
         try:
             if self.settings_repo is not None:
                 ips = await self.settings_repo.get_manual_ips()
-                logger.info(f"Manual IPs from DB: {ips}")
+                logger.info("Manual IPs from DB: %s", ips)
             else:
                 ips = self.manual_ips
 
             manual = ManualDiscovery(ips)
             discovered = await manual.discover()
-            logger.info(f"Manual discovery found {len(discovered)} devices")
+            logger.info("Manual discovery found %d devices", len(discovered))
             for d in discovered:
                 logger.debug(
                     "Manual device: ip=%s, name=%s", d.ip, getattr(d, "name", "?")
                 )
             return discovered
-        except Exception as e:
-            logger.error(f"Manual discovery failed: {e}")
+        except Exception:
+            logger.exception("Manual discovery failed")
             return []
 
     async def _sync_devices_to_db(
@@ -269,13 +271,13 @@ class DeviceSyncService:
         try:
             device = await self._fetch_device_info(discovered)
             await self.repository.upsert(device)
-            logger.info(f"Synced device: {device.name} ({device.device_id})")
+            logger.info("Synced device: %s (%s)", device.name, device.device_id)
             if on_synced:
                 await on_synced(device)
             return True
         except Exception as e:
             device_ip = getattr(discovered, "ip", str(discovered))
-            logger.error(f"Failed to sync device {device_ip}: {e}")
+            logger.exception("Failed to sync device %s", device_ip)
             if on_failed:
                 await on_failed(discovered, e)
             return False

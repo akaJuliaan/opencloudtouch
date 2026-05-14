@@ -489,44 +489,39 @@ class TestBugfix188HardcodedDeviceIdInStreamingAccount:
     async def test_resolves_device_by_account_uuid(self):
         """Account UUID maps to correct device → presets loaded for that device."""
         from opencloudtouch.marge.routes import streaming_full_account
+        from opencloudtouch.marge.service import MargeService
 
-        mock_device = MagicMock()
-        mock_device.device_id = "10CEA9A6FA71"
+        mock_marge = AsyncMock(spec=MargeService)
+        mock_marge.resolve_device_id_for_account = AsyncMock(
+            return_value="10CEA9A6FA71"
+        )
+        mock_marge.get_full_account = AsyncMock(return_value=([], []))
 
-        mock_device_repo = AsyncMock()
-        mock_device_repo.get_by_marge_account_uuid = AsyncMock(return_value=mock_device)
-
-        mock_preset_repo = AsyncMock()
-        mock_preset_repo.get_all_presets = AsyncMock(return_value=[])
-
-        await streaming_full_account("5522049", mock_preset_repo, mock_device_repo)
+        await streaming_full_account("5522049", mock_marge)
 
         # Must have looked up by account UUID, not used hardcoded ID
-        mock_device_repo.get_by_marge_account_uuid.assert_called_once_with("5522049")
-        # Must have loaded presets for the RESOLVED device
-        mock_preset_repo.get_all_presets.assert_called_once_with("10CEA9A6FA71")
+        mock_marge.resolve_device_id_for_account.assert_called_once_with("5522049")
+        # Must have loaded full account for the RESOLVED device
+        mock_marge.get_full_account.assert_called_once_with("10CEA9A6FA71")
 
     @pytest.mark.asyncio
     async def test_unknown_account_returns_empty_not_crash(self):
         """Unknown account UUID → empty presets, no crash, no guessing."""
         from opencloudtouch.marge.routes import streaming_full_account
+        from opencloudtouch.marge.service import MargeService
         from xml.etree import ElementTree
 
-        mock_device_repo = AsyncMock()
-        mock_device_repo.get_by_marge_account_uuid = AsyncMock(return_value=None)
+        mock_marge = AsyncMock(spec=MargeService)
+        mock_marge.resolve_device_id_for_account = AsyncMock(return_value=None)
 
-        mock_preset_repo = AsyncMock()
-
-        result = await streaming_full_account(
-            "UNKNOWN", mock_preset_repo, mock_device_repo
-        )
+        result = await streaming_full_account("UNKNOWN", mock_marge)
 
         assert result.status_code == 200
         root = ElementTree.fromstring(result.body.decode())
         presets = root.find("presets")
         assert len(presets.findall("preset")) == 0
         # Must NOT have tried to load presets with some guessed device
-        mock_preset_repo.get_all_presets.assert_not_called()
+        mock_marge.get_full_account.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_mock_mode_skips_marge_uuid_fetch(self, monkeypatch):
