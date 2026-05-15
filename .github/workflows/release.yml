@@ -6,8 +6,9 @@
 #   1. Pre-flight: Calculate next version, check tag availability, enforce CI green
 #   2. Bump:       Update all package files + commit + push
 #   3. Tag:        vX.Y.Z annotated tag on the bump commit
-#   4. GH Release: Auto-generated changelog + Docker instructions
-#   5. Build:      Trigger build-images.yml (Docker multi-arch + Raspi SD images)
+#   4. GH Release: Auto-generated changelog + Docker instructions (DRAFT)
+#   5. Build:      Run build-images.yml (Docker multi-arch + Raspi SD images)
+#   6. Publish:    Publish release (draft → public) only after successful build
 # ==============================================================================
 
 name: Release
@@ -25,11 +26,6 @@ on:
           - major
       prerelease:
         description: 'Mark as pre-release (beta/rc)'
-        required: false
-        type: boolean
-        default: false
-      skip_raspi:
-        description: 'Skip Raspberry Pi image builds'
         required: false
         type: boolean
         default: false
@@ -367,8 +363,8 @@ jobs:
           name: "OpenCloudTouch v${{ needs.preflight.outputs.version }}"
           body_path: release-notes.md
           prerelease: ${{ inputs.prerelease }}
-          draft: false
-          make_latest: ${{ !inputs.prerelease }}
+          draft: true
+          make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -382,66 +378,67 @@ jobs:
           |------|--------|
           | Version bump | OK - v${VERSION} committed |
           | Git tag | OK - v${VERSION} pushed |
-          | GitHub Release | OK - Published |
+          | GitHub Release | OK - Draft created (published after image build) |
 
           **Release**: https://github.com/${{ github.repository }}/releases/tag/v${VERSION}
           EOF
 
   # ============================================================================
-  # TRIGGER DOCKER + RASPBERRY PI IMAGE BUILDS
+  # BUILD DOCKER + RASPBERRY PI IMAGES (via reusable workflow)
   # ============================================================================
-  trigger-build:
-    name: Trigger Image Builds
+  build-images:
+    name: Build Images
+    needs: [gh-release, tag]
+    uses: ./.github/workflows/build-images.yml
+    with:
+      version: ${{ needs.gh-release.outputs.version }}
+      architectures: all
+      attach_to_release: true
+      checkout_ref: ${{ needs.tag.outputs.tag }}
+    secrets: inherit
+
+  # ============================================================================
+  # PUBLISH RELEASE (draft → public, only after successful image build)
+  # ============================================================================
+  publish-release:
+    name: Publish Release
     runs-on: ubuntu-latest
-    needs: gh-release
-    if: ${{ !inputs.skip_raspi }}
+    needs: [gh-release, build-images]
+    if: always() && needs.gh-release.result == 'success' && needs.build-images.result == 'success'
 
     permissions:
-      actions: write
+      contents: write
 
     steps:
-      - name: Trigger build-images workflow
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ needs.gh-release.outputs.version }}"
-          echo "Triggering Docker + Raspberry Pi image builds for v${VERSION}..."
-
-          gh workflow run build-images.yml \
-            --repo "${{ github.repository }}" \
-            --ref "${{ github.ref_name }}" \
-            --field version="${VERSION}" \
-            --field architectures=all \
-            --field attach_to_release=true
-
-          echo "Image build triggered"
-
-  # ============================================================================
-  # VERIFY DOWNSTREAM WORKFLOWS
-  # ============================================================================
-  verify:
-    name: Verify Downstream
-    runs-on: ubuntu-latest
-    needs: [gh-release, trigger-build]
-    if: always() && needs.gh-release.result == 'success'
-
-    steps:
-      - name: Wait and check build trigger
+      - name: Publish draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ needs.gh-release.outputs.version }}"
           TAG="v${VERSION}"
-          echo "Waiting for build-images.yml to pick up v${VERSION}..."
-          sleep 15
+          echo "Image build succeeded — publishing release ${TAG}..."
 
-          RUN=$(gh run list --workflow=build-images.yml --limit=3 \
-            --json headBranch,status,conclusion,url \
-            --jq ".[] | select(.status == \"in_progress\" or .status == \"queued\")" 2>/dev/null || echo "")
+          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '.id')
 
-          if [ -n "$RUN" ]; then
-            echo "build-images.yml triggered for $TAG"
-            echo "$RUN"
-          else
-            echo "build-images.yml not yet visible - may take a moment to appear in GitHub Actions"
-          fi
+          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}" \
+            --method PATCH \
+            --field draft=false \
+            --field make_latest=${{ !inputs.prerelease }}
+
+          echo "Release ${TAG} published"
+
+      - name: Step summary
+        run: |
+          VERSION="${{ needs.gh-release.outputs.version }}"
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # Release v${VERSION} Published!
+
+          | Step | Status |
+          |------|--------|
+          | Draft release | Created |
+          | Docker images | Built + pushed |
+          | Raspi images | Built + attached |
+          | Release published | **Live** |
+
+          **Release**: https://github.com/${{ github.repository }}/releases/tag/v${VERSION}
+          EOF

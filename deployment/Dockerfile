@@ -22,15 +22,17 @@
 FROM python:3.11-slim@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2eafbf AS python-deps
 
 # Install build dependencies (full toolchain needed for arm/v7 cross-compilation)
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
-        gcc libc6-dev libffi-dev make autoconf automake libtool && \
-    rm -rf /var/lib/apt/lists/*
+        gcc libc6-dev libffi-dev make autoconf automake libtool
 
 WORKDIR /build
 
 # Upgrade pip, setuptools, wheel FIRST to get latest versions with security fixes
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel
 
 # Install Python dependencies with prefix for easy copying
 # First: Install security-pinned transitive deps to prevent vulnerable versions
@@ -38,11 +40,12 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 COPY apps/backend/requirements.txt ./
 COPY apps/backend/pyproject.toml ./
 COPY apps/backend/src ./src
-RUN pip install --no-cache-dir --prefix=/install \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --retries 3 --prefix=/install \
     jaraco-context==6.1.0 \
     wheel==0.46.2 && \
-    pip install --no-cache-dir --prefix=/install -r requirements.txt && \
-    pip install --no-cache-dir --prefix=/install --no-deps .
+    pip install --retries 3 --prefix=/install -r requirements.txt && \
+    pip install --prefix=/install --no-deps .
 
 # Remove vulnerable vendored packages from setuptools (CVE-2026-23949, CVE-2026-24049)
 # These are bundled inside setuptools but not needed at runtime
@@ -70,7 +73,9 @@ LABEL org.opencontainers.image.title="OpenCloudTouch" \
 WORKDIR /app
 
 # Apply OS security patches (fixes CVE-2026-0861 glibc and other HIGH vulns in base image)
-RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get upgrade -y --no-install-recommends
 
 # Copy Python dependencies from build stage
 COPY --from=python-deps /install /usr/local
