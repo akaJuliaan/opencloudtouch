@@ -392,6 +392,7 @@ jobs:
     permissions:
       packages: write
       contents: write
+      security-events: write
     uses: ./.github/workflows/build-images.yml
     with:
       version: ${{ needs.gh-release.outputs.version }}
