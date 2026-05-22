@@ -1,4 +1,4 @@
-﻿# OpenCloudTouch (OCT)
+# OpenCloudTouch (OCT)
 
 > ## ⚠️ DISCLAIMER — USE AT YOUR OWN RISK / NUTZUNG AUF EIGENE GEFAHR
 >
